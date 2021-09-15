@@ -4,9 +4,11 @@ A CLI tool for checking dining reservation availability at Disneyland / Californ
 
 ## usage
 
-`cd dine-at-disney`
-`npm link`
-`dine-at-disney search yyyy-mm-dd`
+```bash
+cd dine-at-disney
+npm link
+dine-at-disney search yyyy-mm-dd
+```
 
 ## Mail alerts
 
