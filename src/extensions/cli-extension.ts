@@ -70,7 +70,7 @@ module.exports = (toolbox: GluegunToolbox) => {
           checkTables(date, onSuccess, api, (numTries += 1), tables);
         }, 60000);
         // FIXME: Temporary, hard-coded search for Lamplight Lounge availability.
-      } else if (!restaurantIds.includes('19629820')) {
+      } else if (!restaurantIds.includes('19013078')) {
         console.log(restaurantIds);
         console.log(`Didn't find the restaurant we want. Checking again in 60s. ${numTries} total attempts.`);
         setTimeout(() => {
