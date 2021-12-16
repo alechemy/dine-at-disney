@@ -19,7 +19,7 @@ npm link
 root@localhost:/usr/src/dine-at-disney# dine-at-disney list
 Listing places...
 | Name                   | ID       |
-| ---------------------- | --------- |
+| ---------------------- | -------- |
 | Award Wieners          | 354084   |
 | Blue Bayou Restaurant  | 354099   |
 | Cafe Orleans           | 354117   |
@@ -31,8 +31,8 @@ Listing places...
 ### Search for any openings
 
 ```bash
-root@localhost:/usr/src/dine-at-disney# dine-at-disney search --date yyyy-mm-dd
-Checking for tables on 2021-12-14...
+root@localhost:/usr/src/dine-at-disney# dine-at-disney search --date yyyy-mm-dd --party 2
+Checking for tables for 2 people on 2021-12-14...
 Found some offers on 2021-12-14:
 | Name                                        | ID       | Available Times     |
 | ------------------------------------------- | -------- | ------------------- |
@@ -51,8 +51,8 @@ Found some offers on 2021-12-14:
 This will also use [notification](#notifications) settings below if configured
 
 ```bash
-root@localhost:/usr/src/dine-at-disney# dine-at-disney search --date 2021-12-14 --ids 19013078
-Checking for tables on 2021-12-14 for Lamplight Lounge...
+root@localhost:/usr/src/dine-at-disney# dine-at-disney search --date 2021-12-14 --party 2 --ids 19013078
+Checking for tables for 2 people on 2021-12-14 for Lamplight Lounge...
 No offers found for Lamplight Lounge. Checking again in 60s. 1 total attempts.
 ```
 
@@ -61,7 +61,7 @@ No offers found for Lamplight Lounge. Checking again in 60s. 1 total attempts.
 This will also use [notification](#notifications) settings below if configured
 
 ```bash
-root@localhost:/usr/src/dine-at-disney# dine-at-disney search --date 2021-12-14 --ids "354261,354450"
+root@localhost:/usr/src/dine-at-disney# dine-at-disney search --date 2021-12-14 --party 2 --ids "354261,354450"
 Checking for tables for 2 people on 2021-12-15 for Goofy's Kitchen, River Belle Terrace...
 Found offers at 20:20 for Goofy's Kitchen. Checking again in 60s. 1 total attempts.
 No offers found for River Belle Terrace. Checking again in 60s. 1 total attempts.
