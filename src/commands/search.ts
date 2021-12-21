@@ -31,7 +31,7 @@ module.exports = {
         date,
         onSuccess,
         print,
-        ids: (ids && typeof ids === 'number' ? ids.toString() : ids).split(','),
+        ids: (typeof ids === 'number' ? ids.toString() : ids).split(','),
         partySize: party,
       });
     } else {

@@ -3,7 +3,6 @@ import { ApisauceInstance } from 'apisauce';
 import { AvailabilityResponse, DiningAvailabilities, mealPeriods } from '../disney-api/model/response';
 import mergeAll from 'lodash/fp/mergeAll';
 import { JSDOM } from 'jsdom';
-import eachSeries from 'async/eachSeries';
 
 const disneyApi: ApisauceInstance = http.create({
   baseURL: 'https://disneyland.disney.go.com',
@@ -24,6 +23,26 @@ const disneyApi: ApisauceInstance = http.create({
 });
 
 /**
+ * Decode the HTML encoded string
+ * No Shame: https://stackoverflow.com/a/44195856/16201934
+ * @param {string} encodedString
+ * @returns string
+ */
+function decodeEntities(encodedString: string) {
+  const translate_re = /&(nbsp|amp|quot|lt|gt);/g;
+  const translate = {
+    nbsp: ' ',
+    amp: '&',
+    quot: '"',
+    lt: '<',
+    gt: '>',
+  };
+  return encodedString
+    .replace(translate_re, (_match, entity) => translate[entity])
+    .replace(/&#(\d+);/gi, (_match, numStr) => String.fromCharCode(parseInt(numStr, 10)));
+}
+
+/**
  * Returns Restaurant Information (Real Names to IDs and such)
  * @param {ApisauceInstance} api
  * @returns {Promise<any>}
@@ -35,18 +54,41 @@ async function restaurantMapping(api: ApisauceInstance = disneyApi): Promise<any
   const dom = new JSDOM(data);
 
   const finderBlob = dom.window.document.querySelector('#finderBlob').innerHTML;
-  const PEP = <any>{};
-  //TODO: This is sort of dangerous but its the only way to get what we want from the blob
-  eval(finderBlob);
 
-  //Scan the DOM for the real name
-  return Object.values(PEP.Finder.List.cards).reduce((prev: any, card: any) => {
-    const htmlCard = dom.window.document.querySelector(card.ref);
-    return {
-      ...prev,
-      [card.id.split(';')[0]]: { ...card, displayName: htmlCard.querySelector('.cardName').innerHTML },
-    };
-  }, {});
+  //Pull out the PEP list which has all of the resturant to html mappings (this is probably subject to a lot of change)
+  const rawList = /PEP\.Finder\.List = ({.*})/gm.exec(finderBlob)[1];
+
+  if (!rawList) {
+    throw new Error('Could not find restaurant mapping');
+  }
+
+  const list = JSON.parse(rawList);
+
+  return (
+    Object.values(list.cards)
+      //Scan the DOM for the real name of the restaurant
+      .map((card: any) => {
+        const htmlCard = dom.window.document.querySelector(card.ref);
+        return {
+          ...card,
+          // Pull the real name from the DOM and add it to the card
+          displayName: decodeEntities(htmlCard.querySelector('.cardName').innerHTML),
+        };
+      })
+      // Filter out the any locations that don't accept a reservation (Thanks to @jmiceter [https://github.com/alechemy/dine-at-disney/pull/1#discussion_r771802763])
+      .filter(
+        (card: any) =>
+          card.facets['reservations-accepted'] !== undefined && card.facets['reservations-accepted'].value % 2 !== 0
+      )
+      //Reduce the list to a single object with the restaurant id as the key and the "card" as the value
+      .reduce(
+        (prev: any, card: any) => ({
+          ...prev,
+          [card.id.split(';')[0]]: { ...card },
+        }),
+        {}
+      )
+  );
 }
 
 /**
@@ -69,7 +111,7 @@ const promiseMemoize = (fn) => {
   };
 };
 
-const memoziedRestaurantMapping = promiseMemoize(restaurantMapping);
+const memoizedRestaurantMapping = promiseMemoize(restaurantMapping);
 
 /**
  * Retrieve a basic auth token that is required for requests to their dining availability endpoint
@@ -107,7 +149,7 @@ module.exports = (toolbox: GluegunToolbox) => {
     ids?: string[];
   }): Promise<any> {
     //Dont pass the API into this as a parameter because the memoizer cant figure out the cache keys
-    const mapping = await memoziedRestaurantMapping();
+    const mapping = await memoizedRestaurantMapping();
 
     // First time run message
     if (numTries === 1) {
@@ -189,21 +231,24 @@ module.exports = (toolbox: GluegunToolbox) => {
         }, 60000);
       } else {
         if (ids) {
-          await eachSeries(ids, async (id: string, callback) => {
-            if (restaurantIds.includes(id)) {
-              print.success(
-                `Found offers at ${hasOffers[id].cleanedTimes.map((time) => time.time).join(', ')} for ${
-                  mapping[id].displayName
-                }. Checking again in 60s. ${numTries} total attempts.`
-              );
-              await onSuccess({ diningAvailability: hasOffers[id] });
-            } else {
-              print.warning(
-                `No offers found for ${mapping[id].displayName}. Checking again in 60s. ${numTries} total attempts.`
-              );
+          try {
+            for (let id of ids) {
+              if (restaurantIds.includes(id)) {
+                print.success(
+                  `Found offers at ${hasOffers[id].cleanedTimes.map((time) => time.time).join(', ')} for ${
+                    mapping[id].displayName
+                  }. Checking again in 60s. ${numTries} total attempts.`
+                );
+                await onSuccess({ diningAvailability: hasOffers[id] });
+              } else {
+                print.warning(
+                  `No offers found for ${mapping[id].displayName}. Checking again in 60s. ${numTries} total attempts.`
+                );
+              }
             }
-            callback();
-          });
+          } catch (err) {
+            print.error(err);
+          }
 
           //Keep checking for new offers
           setTimeout(() => {
@@ -211,7 +256,7 @@ module.exports = (toolbox: GluegunToolbox) => {
           }, 60000);
         } else {
           const { table } = print;
-          console.log(`Found some offers on ${date}:`);
+          print.success(`Found some offers on ${date}:`);
 
           table(
             [
@@ -229,7 +274,7 @@ module.exports = (toolbox: GluegunToolbox) => {
         }
       }
     } else {
-      console.log('not ok');
+      console.error('not ok');
     }
   }
 

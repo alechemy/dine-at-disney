@@ -1,6 +1,5 @@
-import { DiningAvailability, CleanedTime } from '../disney-api/model/response';
+import { DiningAvailability } from '../disney-api/model/response';
 import { http, GluegunPrint } from 'gluegun';
-import eachSeries from 'async/eachSeries';
 
 interface PushoverResponse {
   status: number;
@@ -34,7 +33,7 @@ export default async function pushover({
   //Do not send more than 2 concurrent HTTP requests (TCP connections) to our API,
   //or we may do rate limiting on our side which may cause timeouts and refused connections for your IP.
   try {
-    await eachSeries(diningAvailability.cleanedTimes, async (cleanedTime: CleanedTime, callback) => {
+    for (let cleanedTime of diningAvailability.cleanedTimes) {
       const response = await api.post('/1/messages.json', {
         user,
         token,
@@ -47,15 +46,13 @@ export default async function pushover({
       if (response.status === 200) {
         const data = <PushoverResponse>response.data;
 
-        if (data.status === 1) {
-          callback();
-        } else {
-          callback(data.errors.join(', '));
+        if (data.status !== 1) {
+          throw new Error(`Pushover error: ${data.errors.join(', ')}`);
         }
       } else {
-        callback(`Pushover error: ${response.status}`);
+        throw new Error(`Pushover error: ${response.status}`);
       }
-    });
+    }
   } catch (err) {
     print.error(err);
   }

@@ -77,9 +77,13 @@ Copy those values into your own `.env` file.
 
 #### Pushover alerts
 
-For more information see: https://pushover.net/
+For more information see: [https://pushover.net/](https://pushover.net/)
 
-This service is a one time $5 fee forever. You can purchase a Pushover API token here: https://pushover.net/pricing. Once setup you will get instant push notifications to your device when a table opens.
+This service is a one time $5 fee forever. You can purchase a Pushover API token here: [https://pushover.net/pricing](https://pushover.net/pricing). Once setup you will get instant push notifications to your device when a table opens.
+
+Additionally you can click the reserve link in the push notification to reserve the table.
+
+![Push notification example](push.png)
 
 See `.env.example` for info on the required fields for email alerting.
 
