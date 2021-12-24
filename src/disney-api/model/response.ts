@@ -1,9 +1,30 @@
+export interface CleanedTime {
+  dateTime: string;
+  time: string;
+  directUrl: string;
+}
+
+export interface Card {
+  id: string;
+  ref: string;
+  supportMaxPartySize: boolean;
+  urlFriendlyId: string;
+  isEEC: boolean;
+  displayName: string;
+}
+
 export interface DiningAvailability {
-  [location: string]: { availableTimes: any[] };
+  availableTimes: any[];
+  card: Card;
+  cleanedTimes: CleanedTime[];
+}
+
+export interface DiningAvailabilities {
+  [location: string]: DiningAvailability;
 }
 
 export interface AvailabilityResponse {
-  availability: DiningAvailability;
+  availability: DiningAvailabilities;
 }
 
 // Disney obfuscates their "meal periods" (breakfast/brunch/lunch/dinner) with these weird ids
