@@ -7,8 +7,13 @@ const BASE_URL = `https://${HOST}`;
 const PLACES_URL = (date) =>
   `${BASE_URL}/finder/api/v1/explorer-service/list-ancestor-entities/dlr/80008297;entityType=destination/${date}/dining`;
 
-async function login() {
-  return fetch(`${BASE_URL}/finder/api/v1/authz/public`, {
+/**
+ * Sends a basic login POST request to obtain the auth cookies required for the restaurant details endpoint.
+ *
+ * @returns {Promise<Response>}
+ */
+const login = async () =>
+  fetch(`${BASE_URL}/finder/api/v1/authz/public`, {
     headers: {
       accept: 'application/json, text/plain, */*',
       'cache-control': 'no-cache',
@@ -21,7 +26,6 @@ async function login() {
     mode: 'cors',
     credentials: 'include',
   });
-}
 
 /**
  * Returns Restaurant Information (Real Names to IDs and such)
