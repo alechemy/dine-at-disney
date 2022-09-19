@@ -40,7 +40,7 @@ export default async function mail({
   }
 
   const mailOptions = {
-    subject: `Found openings for ${diningAvailability.card.displayName} on ${date}`,
+    subject: `Found openings for ${diningAvailability.card.name} on ${date}`,
     to,
     from: user,
     text: JSON.stringify(diningAvailability),

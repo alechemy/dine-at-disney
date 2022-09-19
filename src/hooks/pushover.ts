@@ -37,8 +37,8 @@ export default async function pushover({
       const response = await api.post('/1/messages.json', {
         user,
         token,
-        title: `Found openings for ${diningAvailability.card.displayName} on ${date} @ ${cleanedTime.time}`,
-        message: `Found openings for ${partySize} people on ${date} for ${diningAvailability.card.displayName} for the following time(s): ${cleanedTime.time}`,
+        title: `Found openings for ${diningAvailability.card.name} on ${date} @ ${cleanedTime.time}`,
+        message: `Found openings for ${partySize} people on ${date} for ${diningAvailability.card.name} for the following time(s): ${cleanedTime.time}`,
         url: cleanedTime.directUrl,
         url_title: 'Reserve',
       });

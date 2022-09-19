@@ -10,7 +10,7 @@ export interface Card {
   supportMaxPartySize: boolean;
   urlFriendlyId: string;
   isEEC: boolean;
-  displayName: string;
+  name: string;
 }
 
 export interface DiningAvailability {
