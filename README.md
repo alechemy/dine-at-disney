@@ -2,9 +2,15 @@
 
 A CLI tool for checking dining reservation availability at Disneyland / California Adventure.
 
+## Features
+
+- See a list of all restaurants that offer reservations.
+- Search for availability across all restaurants, or narrow your query to specific places.
+- Continually monitor a restaurant for availability, and receive email/push notifications when an opening is found.
+
 ## Installation
 
-```bash
+```sh
 git clone https://github.com/alechemy/dine-at-disney.git
 cd dine-at-disney
 npm install
@@ -13,46 +19,63 @@ npm link
 
 ## Usage
 
-### List Restaurants and their IDs
+### List restaurants and their IDs
 
-```bash
-root@localhost:/usr/src/dine-at-disney# dine-at-disney list
+```sh
+dine-at-disney list
+```
+
+Sample output:
+
+```prose
 Listing places...
-| Name                   | ID       |
-| ---------------------- | -------- |
-| Award Wieners          | 354084   |
-| Blue Bayou Restaurant  | 354099   |
-| Cafe Orleans           | 354117   |
-| Carnation Cafe         | 354129   |
-| Catal Restaurant       | 354132   |
+| Name                                                   | ID       |
+| ------------------------------------------------------ | -------- |
+| Blue Bayou Restaurant                                  | 354099   |
+| Cafe Orleans                                           | 354117   |
+| Carnation Cafe                                         | 354129   |
+| Carthay Circle Lounge - Alfresco Dining                | 16588263 |
+| Carthay Circle Restaurant                              | 16515009 |
+| Catal Restaurant                                       | 354132   |
+| Disney Princess Breakfast Adventures                   | 19140685 |
 ...
 ```
 
-### Search for any openings
+### Search for openings at any restaurant
 
-```bash
-root@localhost:/usr/src/dine-at-disney# dine-at-disney search --date yyyy-mm-dd --party 2
-Checking for tables for 2 people on 2021-12-14...
-Found some offers on 2021-12-14:
-| Name                                        | ID       | Available Times     |
-| ------------------------------------------- | -------- | ------------------- |
-| La Brea Bakery Cafe                         | 354327   | 13:45               |
-| Naples Ristorante e Bar                     | 354378   | 15:30, 15:00, 14:00 |
-| Storytellers Cafe                           | 354474   | 20:30               |
-| Tortilla Jo's                               | 354528   | 19:00, 16:00, 15:30 |
-| Uva Bar &amp; Cafe                          | 354540   | 14:30               |
-| Magic Key Terrace - Magic Key Holder Dining | 15527906 | 17:55               |
-| Carthay Circle Lounge - Alfresco Dining     | 16588263 | 12:50               |
-| GCH Craftsman Bar                           | 19343532 | 14:45               |
+```sh
+dine-at-disney search --date yyyy-mm-dd --party 2
 ```
 
-### Search for specific openings
+Sample output:
+
+```prose
+Checking for tables for 2 people on 2022-09-20...
+Found some offers on 2022-09-20:
+| Name                               | ID       | Available Times           |
+| ---------------------------------- | -------- | ------------------------- |
+| Catal Restaurant                   | 354132   | 5:00 PM                   |
+| GCH Craftsman Bar                  | 19343532 | 6:45 PM, 8:00 PM          |
+| Goofy's Kitchen                    | 354261   | 7:35 PM                   |
+| La Brea Bakery Cafe                | 354327   | 2:30 PM                   |
+| River Belle Terrace                | 354450   | 5:30 PM, 7:05 PM, 2:30 PM |
+| Splitsville Luxury Lanes™ – Dining | 18735825 | 7:00 PM, 2:30 PM          |
+| Storytellers Cafe                  | 354474   | 6:50 PM, 7:20 PM, 7:40 PM |
+| Tortilla Jo's                      | 354528   | 6:30 PM, 7:00 PM, 2:00 PM |
+```
+
+### Search for openings at a specific restaurant
 
 This will also use [notification](#notifications) settings below if configured
 
-```bash
-root@localhost:/usr/src/dine-at-disney# dine-at-disney search --date 2021-12-14 --party 2 --ids 19013078
-Checking for tables for 2 people on 2021-12-14 for Lamplight Lounge...
+```sh
+dine-at-disney search --date 2022-12-14 --party 2 --ids 19013078
+```
+
+Sample output:
+
+```prose
+Checking for tables for 2 people on 2022-12-14 for Lamplight Lounge...
 No offers found for Lamplight Lounge. Checking again in 60s. 1 total attempts.
 ```
 
@@ -60,9 +83,14 @@ No offers found for Lamplight Lounge. Checking again in 60s. 1 total attempts.
 
 This will also use [notification](#notifications) settings below if configured
 
-```bash
-root@localhost:/usr/src/dine-at-disney# dine-at-disney search --date 2021-12-14 --party 2 --ids "354261,354450"
-Checking for tables for 2 people on 2021-12-15 for Goofy's Kitchen, River Belle Terrace...
+```sh
+dine-at-disney search --date 2022-12-14 --party 2 --ids "354261,354450"
+```
+
+Sample output:
+
+```prose
+Checking for tables for 2 people on 2022-12-15 for Goofy's Kitchen, River Belle Terrace...
 Found offers at 20:20 for Goofy's Kitchen. Checking again in 60s. 1 total attempts.
 No offers found for River Belle Terrace. Checking again in 60s. 1 total attempts.
 ```
