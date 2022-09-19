@@ -71,16 +71,6 @@ const restaurantMapping = async (date?: string) => {
     );
 };
 
-/**
- * Retrieve a basic auth token that is required for requests to their dining availability endpoint
- * @param {ApisauceInstance} api
- * @returns {Promise<any>}
- */
-async function getAuthToken(api: ApisauceInstance = disneyApi): Promise<any> {
-  const { data } = await api.get('/authentication/get-client-token');
-  return data;
-}
-
 // add your CLI-specific functionality here, which will then be accessible
 // to your commands
 module.exports = (toolbox: GluegunToolbox) => {
@@ -128,51 +118,47 @@ module.exports = (toolbox: GluegunToolbox) => {
       }
     }
 
-    const auth = await getAuthToken();
-    api.setHeader('Authorization', `BEARER ${auth.access_token}`);
-
     const allResults = await Promise.all([
-      api.get(
-        `/api/wdpro/explorer-service/public/finder/dining-availability/80008297;entityType=destination?searchDate=${date}&partySize=${partySize.toString()}&mobile=false&mealPeriod=${
+      fetch(
+        `${BASE_URL}/finder/api/v1/explorer-service/dining-availability-list/false/dlr/80008297;entityType=destination/${date}/${partySize.toString()}/?mealPeriod=${
           mealPeriods.breakast
         }`
       ),
-      api.get(
-        `/api/wdpro/explorer-service/public/finder/dining-availability/80008297;entityType=destination?searchDate=${date}&partySize=${partySize.toString()}&mobile=false&mealPeriod=${
+      fetch(
+        `${BASE_URL}/finder/api/v1/explorer-service/dining-availability-list/false/dlr/80008297;entityType=destination/${date}/${partySize.toString()}/?mealPeriod=${
           mealPeriods.brunch
         }`
       ),
-      api.get(
-        `/api/wdpro/explorer-service/public/finder/dining-availability/80008297;entityType=destination?searchDate=${date}&partySize=${partySize.toString()}&mobile=false&mealPeriod=${
+      fetch(
+        `${BASE_URL}/finder/api/v1/explorer-service/dining-availability-list/false/dlr/80008297;entityType=destination/${date}/${partySize.toString()}/?mealPeriod=${
           mealPeriods.lunch
         }`
       ),
-      api.get(
-        `/api/wdpro/explorer-service/public/finder/dining-availability/80008297;entityType=destination?searchDate=${date}&partySize=${partySize.toString()}&mobile=false&mealPeriod=${
+      fetch(
+        `${BASE_URL}/finder/api/v1/explorer-service/dining-availability-list/false/dlr/80008297;entityType=destination/${date}/${partySize.toString()}/?mealPeriod=${
           mealPeriods.dinner
         }`
       ),
-    ]).then((res) => res.map((res) => (res.data as AvailabilityResponse)?.availability));
+    ])
+      .then((responses) => Promise.all(responses.map((response) => response.json())))
+      .then((res) => res.map((res) => (res as AvailabilityResponse)?.availability));
 
     const mergedResults: AvailabilityResponse = mergeAll(allResults);
 
     if (mergedResults) {
       const hasOffers: DiningAvailabilities = Object.entries(mergedResults as AvailabilityResponse)
-        .filter(([_id, location]) => location.availableTimes.some((time) => time.offers !== undefined))
+        .filter(([_id, location]) => location.hasAvailability)
         .reduce(
           (acc, [key, val]) => (
             (acc[key.split(';')[0]] = {
               ...val,
               card: mapping[key.split(';')[0]],
-              cleanedTimes: val.availableTimes.reduce((carry, time) => {
-                const offers = time.offers.map((offer) => ({
-                  dateTime: offer.dateTime,
-                  time: offer.time,
-                  //Direct Reservation Link
-                  directUrl: `https://disneyland.disney.go.com/dining-reservation/setup-order/table-service/?offerId[]=${offer.url}&offerOrigin=/dining/`,
-                }));
-                return [...carry, ...offers];
-              }, {}),
+              cleanedTimes: val.singleLocation.offers.map((offer) => ({
+                date: offer.date,
+                time: offer.label,
+                // Direct Reservation Link
+                directUrl: `https://disneyland.disney.go.com/dining-reservation/setup-order/table-service/?offerId[]=${offer.url}&offerOrigin=/dining/`,
+              })),
             }),
             acc
           ),

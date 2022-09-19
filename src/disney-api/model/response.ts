@@ -1,5 +1,5 @@
 export interface CleanedTime {
-  dateTime: string;
+  date: string;
   time: string;
   directUrl: string;
 }
