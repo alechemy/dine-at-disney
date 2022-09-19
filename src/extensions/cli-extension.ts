@@ -101,29 +101,23 @@ module.exports = (toolbox: GluegunToolbox) => {
       }
     }
 
-    const allResults = await Promise.all([
+    const requests = Object.values(mealPeriods).map((mealPeriod) =>
       fetch(
-        `${BASE_URL}/finder/api/v1/explorer-service/dining-availability-list/false/dlr/80008297;entityType=destination/${date}/${partySize.toString()}/?mealPeriod=${
-          mealPeriods.breakast
-        }`
-      ),
-      fetch(
-        `${BASE_URL}/finder/api/v1/explorer-service/dining-availability-list/false/dlr/80008297;entityType=destination/${date}/${partySize.toString()}/?mealPeriod=${
-          mealPeriods.brunch
-        }`
-      ),
-      fetch(
-        `${BASE_URL}/finder/api/v1/explorer-service/dining-availability-list/false/dlr/80008297;entityType=destination/${date}/${partySize.toString()}/?mealPeriod=${
-          mealPeriods.lunch
-        }`
-      ),
-      fetch(
-        `${BASE_URL}/finder/api/v1/explorer-service/dining-availability-list/false/dlr/80008297;entityType=destination/${date}/${partySize.toString()}/?mealPeriod=${
-          mealPeriods.dinner
-        }`
-      ),
-    ])
-      .then((responses) => Promise.all(responses.map((response) => response.json())))
+        `${BASE_URL}/finder/api/v1/explorer-service/dining-availability-list/false/dlr/80008297;entityType=destination/${date}/${partySize.toString()}/?mealPeriod=${mealPeriod}`
+      )
+    );
+
+    const allResults = await Promise.all(requests)
+      .then((responses) => Promise.all(responses.map((response) => response.text())))
+      .then((responses) =>
+        responses.map((res) => {
+          try {
+            return JSON.parse(res);
+          } catch {
+            return {};
+          }
+        })
+      )
       .then((res) => res.map((res) => (res as AvailabilityResponse)?.availability));
 
     const mergedResults: AvailabilityResponse = mergeAll(allResults);
@@ -140,7 +134,7 @@ module.exports = (toolbox: GluegunToolbox) => {
                 date: offer.date,
                 time: offer.label,
                 // Direct Reservation Link
-                directUrl: `https://disneyland.disney.go.com/dining-reservation/setup-order/table-service/?offerId[]=${offer.url}&offerOrigin=/dining/`,
+                directUrl: `${BASE_URL}/dining-reservation/setup-order/table-service/?offerId[]=${offer.url}&offerOrigin=/dining/`,
               })),
             }),
             acc
