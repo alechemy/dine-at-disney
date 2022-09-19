@@ -1,5 +1,4 @@
-import { GluegunToolbox, http, GluegunPrint } from 'gluegun';
-import { ApisauceInstance } from 'apisauce';
+import { GluegunToolbox, GluegunPrint } from 'gluegun';
 import { AvailabilityResponse, DiningAvailabilities, mealPeriods } from '../disney-api/model/response';
 import mergeAll from 'lodash/fp/mergeAll';
 
@@ -24,32 +23,14 @@ async function login() {
   });
 }
 
-const disneyApi: ApisauceInstance = http.create({
-  baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    Accept: 'application/json',
-    Host: 'disneyland.disney.go.com',
-    'Cache-Control': 'no-cache',
-    Referer: 'https://disneyland.disney.go.com/dining/',
-    'User-Agent':
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15',
-    Connection: 'keep-alive',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'X-Cache-Control': 'no-cache',
-    'X-Requested-With': 'XMLHttpRequest',
-    'X-Disney-Internal-Site': 'dlr',
-  },
-});
-
 /**
  * Returns Restaurant Information (Real Names to IDs and such)
- * @param {ApisauceInstance} api
+ * @param {string} date - date string in yyyy-mm-dd format
  * @returns {Array<any>}
  */
 const restaurantMapping = async (date?: string) => {
   if (!date) {
-    // default to today's date in yyyy-mm-dd format
+    // default to today's date in yyyy-mm-dd
     date = new Date().toLocaleDateString('en-CA');
   }
 
@@ -80,7 +61,6 @@ module.exports = (toolbox: GluegunToolbox) => {
   async function checkTables({
     date,
     onSuccess,
-    api = disneyApi,
     numTries = 1,
     partySize = 2,
     tables = [],
@@ -89,7 +69,6 @@ module.exports = (toolbox: GluegunToolbox) => {
   }: {
     date: string;
     onSuccess: Function;
-    api: ApisauceInstance;
     numTries?: number;
     partySize?: number;
     tables?: string[];
@@ -170,7 +149,7 @@ module.exports = (toolbox: GluegunToolbox) => {
       if (restaurantIds.length === 0) {
         print.warning(`No offers found for anything. Checking again in 60s. ${numTries} total attempts.`);
         setTimeout(() => {
-          checkTables({ date, onSuccess, api, numTries: (numTries += 1), tables, print, ids });
+          checkTables({ date, onSuccess, numTries: (numTries += 1), tables, print, ids });
         }, 60000);
       } else {
         if (ids) {
@@ -195,7 +174,7 @@ module.exports = (toolbox: GluegunToolbox) => {
 
           //Keep checking for new offers
           setTimeout(() => {
-            checkTables({ date, onSuccess, api, numTries: (numTries += 1), tables, print, ids });
+            checkTables({ date, onSuccess, numTries: (numTries += 1), tables, print, ids });
           }, 60000);
         } else {
           const { table } = print;
@@ -223,7 +202,7 @@ module.exports = (toolbox: GluegunToolbox) => {
     }
   }
 
-  async function listPlaces({ print }: { api: ApisauceInstance; print: GluegunPrint }): Promise<any> {
+  async function listPlaces({ print }: { print: GluegunPrint }): Promise<any> {
     const { table } = print;
     const mapping = await restaurantMapping();
 
