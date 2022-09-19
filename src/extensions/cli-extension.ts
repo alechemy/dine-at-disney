@@ -204,11 +204,13 @@ module.exports = (toolbox: GluegunToolbox) => {
           table(
             [
               ['Name', 'ID', 'Available Times'],
-              ...Object.entries(hasOffers).map(([id, restaurant]) => [
-                restaurant.card.name,
-                id,
-                restaurant.cleanedTimes.map((time) => time.time).join(', '),
-              ]),
+              ...Object.entries(hasOffers)
+                .sort(([, aV]: any, [, bV]: any) => aV.card.name.localeCompare(bV.card.name))
+                .map(([id, restaurant]) => [
+                  restaurant.card.name,
+                  id,
+                  restaurant.cleanedTimes.map((time) => time.time).join(', '),
+                ]),
             ],
             {
               format: 'markdown',
@@ -227,9 +229,17 @@ module.exports = (toolbox: GluegunToolbox) => {
 
     print.info(`Listing places...`);
 
-    table([['Name', 'ID'], ...Object.entries(mapping).map(([k, v]: [k: any, v: any]) => [v.name, k])], {
-      format: 'markdown',
-    });
+    table(
+      [
+        ['Name', 'ID'],
+        ...Object.entries(mapping)
+          .sort(([, aV]: any, [, bV]: any) => aV.name.localeCompare(bV.name))
+          .map(([k, v]: [k: any, v: any]) => [v.name, k]),
+      ],
+      {
+        format: 'markdown',
+      }
+    );
   }
 
   toolbox.disneyApi = { checkTables, listPlaces };
