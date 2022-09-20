@@ -23,6 +23,10 @@ export interface DiningAvailabilities {
   [location: string]: DiningAvailability;
 }
 
+export interface RestaurantMapping {
+  [location: string]: any;
+}
+
 export interface AvailabilityResponse {
   availability: DiningAvailabilities;
 }

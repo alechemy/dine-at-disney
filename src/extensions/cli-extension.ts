@@ -1,5 +1,10 @@
 import { GluegunToolbox, GluegunPrint } from 'gluegun';
-import { AvailabilityResponse, DiningAvailabilities, mealPeriods } from '../disney-api/model/response';
+import {
+  AvailabilityResponse,
+  DiningAvailabilities,
+  mealPeriods,
+  RestaurantMapping,
+} from '../disney-api/model/response';
 import mergeAll from 'lodash/fp/mergeAll';
 
 const HOST = 'disneyland.disney.go.com';
@@ -32,7 +37,7 @@ const login = async () =>
  * @param {string} date - date string in yyyy-mm-dd format
  * @returns {Array<any>}
  */
-const restaurantMapping = async (date?: string) => {
+const getRestaurantMapping = async (print: GluegunPrint, date?: string): Promise<RestaurantMapping> => {
   if (!date) {
     // default to today's date in yyyy-mm-dd
     date = new Date().toLocaleDateString('en-CA');
@@ -41,11 +46,16 @@ const restaurantMapping = async (date?: string) => {
   const loginResponse = await login();
   const loginCookies = loginResponse.headers.get('set-cookie');
 
-  const json = await fetch(`${PLACES_URL(date)}`, {
+  const { results } = await fetch(`${PLACES_URL(date)}`, {
     headers: { cookie: loginCookies },
   }).then((res) => res.json());
 
-  return json.results
+  if (!results) {
+    print.error('Failed to retrieve the list of available restaurants. Please try again.');
+    process.exit(-1);
+  }
+
+  return results
     .filter((restaraunt) => restaraunt.facets.tableService?.includes('reservations-accepted'))
     .reduce(
       (prev: any, card: any) => ({
@@ -53,7 +63,7 @@ const restaurantMapping = async (date?: string) => {
         [card.id.split(';')[0]]: { ...card },
       }),
       {}
-    );
+    ) as RestaurantMapping;
 };
 
 // add your CLI-specific functionality here, which will then be accessible
@@ -70,6 +80,7 @@ module.exports = (toolbox: GluegunToolbox) => {
     tables = [],
     print,
     ids,
+    mapping,
   }: {
     date: string;
     onSuccess: Function;
@@ -78,8 +89,9 @@ module.exports = (toolbox: GluegunToolbox) => {
     tables?: string[];
     print: GluegunPrint;
     ids?: string[];
+    mapping?: RestaurantMapping;
   }): Promise<any> {
-    const mapping = await restaurantMapping();
+    mapping = mapping ?? (await getRestaurantMapping(print, date));
 
     // First time run message
     if (numTries === 1) {
@@ -108,17 +120,30 @@ module.exports = (toolbox: GluegunToolbox) => {
     );
 
     const allResults = await Promise.all(requests)
-      .then((responses) => Promise.all(responses.map((response) => response.text())))
       .then((responses) =>
-        responses.map((res) => {
+        Promise.all(
+          // FIXME upstream: https://github.com/nodejs/undici/issues/1414
+          responses.map(async (response) => {
+            try {
+              return await response.text();
+            } catch (e) {
+              print.error(e);
+              return '{}';
+            }
+          })
+        )
+      )
+      .then((responses) =>
+        responses.map((res): AvailabilityResponse => {
           try {
             return JSON.parse(res);
-          } catch {
-            return {};
+          } catch (e) {
+            print.error(e);
+            return { availability: {} };
           }
         })
       )
-      .then((res) => res.map((res) => (res as AvailabilityResponse)?.availability));
+      .then((res: AvailabilityResponse[]) => res.map((res) => res?.availability ?? {}));
 
     const mergedResults: AvailabilityResponse = mergeAll(allResults);
 
@@ -130,11 +155,11 @@ module.exports = (toolbox: GluegunToolbox) => {
             (acc[key.split(';')[0]] = {
               ...val,
               card: mapping[key.split(';')[0]],
-              cleanedTimes: val.singleLocation.offers.map((offer) => ({
-                date: offer.date,
-                time: offer.label,
+              cleanedTimes: val.singleLocation.offers.map(({ date, label: time, url }) => ({
+                date,
+                time,
                 // Direct Reservation Link
-                directUrl: `${BASE_URL}/dining-reservation/setup-order/table-service/?offerId[]=${offer.url}&offerOrigin=/dining/`,
+                directUrl: `${BASE_URL}/dining-reservation/setup-order/table-service/?offerId[]=${url}&offerOrigin=/dining/`,
               })),
             }),
             acc
@@ -147,7 +172,7 @@ module.exports = (toolbox: GluegunToolbox) => {
       if (restaurantIds.length === 0) {
         print.warning(`No offers found for anything. Checking again in 60s. ${numTries} total attempts.`);
         setTimeout(() => {
-          checkTables({ date, onSuccess, numTries: (numTries += 1), tables, print, ids });
+          checkTables({ date, onSuccess, numTries: (numTries += 1), tables, print, ids, mapping });
         }, 60000);
       } else {
         if (ids) {
@@ -172,7 +197,7 @@ module.exports = (toolbox: GluegunToolbox) => {
 
           //Keep checking for new offers
           setTimeout(() => {
-            checkTables({ date, onSuccess, numTries: (numTries += 1), tables, print, ids });
+            checkTables({ date, onSuccess, numTries: (numTries += 1), tables, print, ids, mapping });
           }, 60000);
         } else {
           const { table } = print;
@@ -202,7 +227,7 @@ module.exports = (toolbox: GluegunToolbox) => {
 
   async function listPlaces({ print }: { print: GluegunPrint }): Promise<any> {
     const { table } = print;
-    const mapping = await restaurantMapping();
+    const mapping = await getRestaurantMapping(print);
 
     print.info(`Listing places...`);
 
