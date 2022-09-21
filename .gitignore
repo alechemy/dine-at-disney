@@ -9,3 +9,4 @@ build
 .nova
 .env*
 !.env.example
+.npmrc

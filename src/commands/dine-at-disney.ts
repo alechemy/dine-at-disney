@@ -5,6 +5,6 @@ module.exports = {
   run: async (toolbox: GluegunToolbox) => {
     const { print } = toolbox;
 
-    print.info('Woof!');
+    print.printHelp(toolbox);
   },
 } as GluegunCommand;
