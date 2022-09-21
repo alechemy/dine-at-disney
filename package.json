@@ -31,13 +31,13 @@
     "axios": "^0.27.2",
     "dotenv": "^16.0.2",
     "gluegun": "^5.1.2",
-    "lodash-es": "^4.17.21",
+    "lodash": "^4.17.21",
     "nodemailer": "^6.7.8"
   },
   "devDependencies": {
     "@types/jest": "^27.0.1",
     "@types/jsdom": "^16.2.13",
-    "@types/lodash-es": "^4.17.5",
+    "@types/lodash": "^4.14.185",
     "@types/node": "^12.7.11",
     "@types/nodemailer": "^6.4.4",
     "jest": "^27.1.1",

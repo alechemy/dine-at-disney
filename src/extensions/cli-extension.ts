@@ -5,7 +5,7 @@ import {
   mealPeriods,
   RestaurantMapping,
 } from '../disney-api/model/response';
-import mergeAll from 'lodash/fp/mergeAll';
+import merge from 'lodash/merge';
 
 const HOST = 'disneyland.disney.go.com';
 const BASE_URL = `https://${HOST}`;
@@ -145,7 +145,7 @@ module.exports = (toolbox: GluegunToolbox) => {
       )
       .then((res: AvailabilityResponse[]) => res.map((res) => res?.availability ?? {}));
 
-    const mergedResults: AvailabilityResponse = mergeAll(allResults);
+    const mergedResults: AvailabilityResponse = merge(allResults);
 
     if (mergedResults) {
       const hasOffers: DiningAvailabilities = Object.entries(mergedResults as AvailabilityResponse)
