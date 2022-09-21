@@ -11,11 +11,11 @@ A CLI tool for checking dining reservation availability at Disneyland / Californ
 ## Installation
 
 ```sh
-git clone https://github.com/alechemy/dine-at-disney.git
-cd dine-at-disney
-npm install
-npm link
+npm install -g dine-at-disney
 ```
+
+Please note: as of writing, this package utilizes Node v18's global `fetch` API, and as such,
+Node v18 is required.
 
 ## Usage
 
