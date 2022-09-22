@@ -6,6 +6,9 @@
   "bin": {
     "dine-at-disney": "bin/dine-at-disney"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "clean-build": "rm -rf ./build",
     "compile": "tsc -p .",
