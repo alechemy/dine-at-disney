@@ -50,8 +50,8 @@ dine-at-disney search --date yyyy-mm-dd --party 2
 Sample output:
 
 ```prose
-Checking for tables for 2 people on 2022-09-20...
-Found some offers on 2022-09-20:
+Checking for tables for 2 people on 2023-09-20...
+Found some offers on 2023-09-20:
 | Name                               | ID       | Available Times           |
 | ---------------------------------- | -------- | ------------------------- |
 | Catal Restaurant                   | 354132   | 5:00 PM                   |
@@ -69,13 +69,13 @@ Found some offers on 2022-09-20:
 This will also use [notification](#notifications) settings below if configured
 
 ```sh
-dine-at-disney search --date 2022-12-14 --party 2 --ids 19013078
+dine-at-disney search --date 2023-12-14 --party 2 --ids 19013078
 ```
 
 Sample output:
 
 ```prose
-Checking for tables for 2 people on 2022-12-14 for Lamplight Lounge...
+Checking for tables for 2 people on 2023-12-14 for Lamplight Lounge...
 No offers found for Lamplight Lounge. Checking again in 60s. 1 total attempts.
 ```
 
@@ -84,13 +84,13 @@ No offers found for Lamplight Lounge. Checking again in 60s. 1 total attempts.
 This will also use [notification](#notifications) settings below if configured
 
 ```sh
-dine-at-disney search --date 2022-12-14 --party 2 --ids "354261,354450"
+dine-at-disney search --date 2023-12-14 --party 2 --ids "354261,354450"
 ```
 
 Sample output:
 
 ```prose
-Checking for tables for 2 people on 2022-12-15 for Goofy's Kitchen, River Belle Terrace...
+Checking for tables for 2 people on 2023-12-15 for Goofy's Kitchen, River Belle Terrace...
 Found offers at 20:20 for Goofy's Kitchen. Checking again in 60s. 1 total attempts.
 No offers found for River Belle Terrace. Checking again in 60s. 1 total attempts.
 ```
