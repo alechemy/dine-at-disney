@@ -172,7 +172,7 @@ module.exports = (toolbox: GluegunToolbox) => {
       if (restaurantIds.length === 0) {
         print.warning(`No offers found for anything. Checking again in 60s. ${numTries} total attempts.`);
         setTimeout(() => {
-          checkTables({ date, onSuccess, numTries: (numTries += 1), tables, print, ids, mapping });
+          checkTables({ date, onSuccess, numTries: (numTries += 1), partySize, tables, print, ids, mapping });
         }, 60000);
       } else {
         if (ids) {
@@ -197,7 +197,7 @@ module.exports = (toolbox: GluegunToolbox) => {
 
           //Keep checking for new offers
           setTimeout(() => {
-            checkTables({ date, onSuccess, numTries: (numTries += 1), tables, print, ids, mapping });
+            checkTables({ date, onSuccess, numTries: (numTries += 1), partySize, tables, print, ids, mapping });
           }, 60000);
         } else {
           const { table } = print;
