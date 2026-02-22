@@ -1,8 +1,12 @@
 const { build } = require('gluegun');
 
-// Load .env vars
+// Load .env vars (Node >= 20.12 built-in)
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+const fs = require('fs');
+const envPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
+  process.loadEnvFile(envPath);
+}
 
 /**
  * Create the cli and kick it off
@@ -20,7 +24,7 @@ async function run(argv) {
   // this can improve performance if they're not necessary for your project:
   // .exclude(['meta', 'strings', 'print', 'filesystem', 'semver', 'system', 'prompt', 'http', 'template', 'patching', 'package-manager'])
   // and run it
-  const toolbox = await cli.run(argv);
+  const toolbox = await cli.run(argv.slice(2));
 
   // send it back (for testing, mostly)
   return toolbox;

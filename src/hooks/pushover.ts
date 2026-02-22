@@ -1,5 +1,5 @@
 import { DiningAvailability } from '../disney-api/model/response';
-import { http, GluegunPrint } from 'gluegun';
+import { GluegunPrint } from 'gluegun';
 
 interface PushoverResponse {
   status: number;
@@ -26,31 +26,31 @@ export default async function pushover({
     return;
   }
 
-  const api = http.create({
-    baseURL: 'https://api.pushover.net',
-  });
-
   //Do not send more than 2 concurrent HTTP requests (TCP connections) to our API,
   //or we may do rate limiting on our side which may cause timeouts and refused connections for your IP.
   try {
     for (let cleanedTime of diningAvailability.cleanedTimes) {
-      const response = await api.post('/1/messages.json', {
-        user,
-        token,
-        title: `Found openings for ${diningAvailability.card.name} on ${date} @ ${cleanedTime.time}`,
-        message: `Found openings for ${partySize} people on ${date} for ${diningAvailability.card.name} for the following time(s): ${cleanedTime.time}`,
-        url: cleanedTime.directUrl,
-        url_title: 'Reserve',
+      const response = await fetch('https://api.pushover.net/1/messages.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user,
+          token,
+          title: `Found openings for ${diningAvailability.restaurant.name} on ${date} @ ${cleanedTime.time}`,
+          message: `Found openings for ${partySize} people on ${date} for ${diningAvailability.restaurant.name} for the following time(s): ${cleanedTime.time}`,
+          url: `https://disneyland.disney.go.com/dine-res/restaurant/${diningAvailability.restaurant.urlFriendlyId}/`,
+          url_title: 'Reserve',
+        }),
       });
 
-      if (response.status === 200) {
-        const data = <PushoverResponse>response.data;
-
-        if (data.status !== 1) {
-          throw new Error(`Pushover error: ${data.errors.join(', ')}`);
-        }
-      } else {
+      if (!response.ok) {
         throw new Error(`Pushover error: ${response.status}`);
+      }
+
+      const data: PushoverResponse = await response.json();
+
+      if (data.status !== 1) {
+        throw new Error(`Pushover error: ${data.errors.join(', ')}`);
       }
     }
   } catch (err) {

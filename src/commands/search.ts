@@ -12,12 +12,18 @@ module.exports = {
       disneyApi,
     } = toolbox;
 
-    const defaultDate = new Date();
-    const year = new Intl.DateTimeFormat('en', { year: 'numeric' }).format(defaultDate);
-    const month = new Intl.DateTimeFormat('en', { month: 'numeric' }).format(defaultDate);
-    const day = new Intl.DateTimeFormat('en', { day: '2-digit' }).format(defaultDate);
+    const { date = new Date().toLocaleDateString('en-CA'), ids, party = 2, 'show-browser': showBrowser = false } = options;
 
-    const { date = `${year}-${month}-${day}`, ids, party = 2 } = options;
+    if (party < 1) {
+      print.error('Party size must be at least 1.');
+      return;
+    }
+
+    const today = new Date().toLocaleDateString('en-CA');
+    if (date < today) {
+      print.error('Date must not be in the past.');
+      return;
+    }
 
     //Hooks
     const onSuccess = async ({ diningAvailability }: { diningAvailability: DiningAvailability }) =>
@@ -33,9 +39,10 @@ module.exports = {
         print,
         ids: (typeof ids === 'number' ? ids.toString() : ids).split(','),
         partySize: party,
+        showBrowser,
       });
     } else {
-      disneyApi.checkTables({ date, onSuccess, print, partySize: party });
+      disneyApi.checkTables({ date, onSuccess, print, partySize: party, showBrowser });
     }
   },
 } as GluegunCommand;

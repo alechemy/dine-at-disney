@@ -1,40 +1,70 @@
 export interface CleanedTime {
   date: string;
   time: string;
-  directUrl: string;
+  label: string;
+  mealPeriod: string;
+  offerId: string;
 }
 
-export interface Card {
+export interface Offer {
+  offerId: string;
+  time: string;
+  label: string;
+}
+
+export interface MealPeriodOffer {
+  enterpriseMealPeriodId: string;
+  mealPeriodType: string;
+  mealPeriodName: string;
+  startTime: string;
+  endTime: string;
+  cuisine: string;
+  serviceStyle: string;
+  experienceType: string;
+  offersByAccessibility: {
+    accessibilityLevel: string;
+    offers: Offer[];
+  }[];
+}
+
+export interface Restaurant {
   id: string;
-  ref: string;
-  supportMaxPartySize: boolean;
-  urlFriendlyId: string;
-  isEEC: boolean;
   name: string;
+  description: string;
+  mealPeriodType: string;
+  priceRange: string;
+  experienceType: string;
+  primaryCuisineType: string;
+  urlFriendlyId: string;
+  ancestorLocationParkResort: string;
+  ancestorLocationLandArea: string;
+  offers: { [date: string]: MealPeriodOffer[] };
 }
 
 export interface DiningAvailability {
-  availableTimes: any[];
-  card: Card;
+  restaurant: Restaurant;
   cleanedTimes: CleanedTime[];
 }
 
 export interface DiningAvailabilities {
-  [location: string]: DiningAvailability;
+  [restaurantId: string]: DiningAvailability;
 }
 
-export interface RestaurantMapping {
-  [location: string]: any;
+export interface EventTime {
+  eventProductId: string;
+  eventLabel: string;
+  eventFacilityId: string;
+  restaurant: { [id: string]: Restaurant };
 }
 
-export interface AvailabilityResponse {
-  availability: DiningAvailabilities;
+export interface DiningEvent {
+  name: string;
+  id: string;
+  eventTimes: EventTime[];
 }
 
-// Disney obfuscates their "meal periods" (breakfast/brunch/lunch/dinner) with these weird ids
-export const mealPeriods = {
-  breakfast: 80000712, //
-  brunch: 80000713,
-  lunch: 80000717,
-  dinner: 80000714,
-};
+export interface AvailabilityApiResponse {
+  restaurant: { [id: string]: Restaurant };
+  diningEvent?: { [id: string]: DiningEvent };
+  statusCode: number;
+}

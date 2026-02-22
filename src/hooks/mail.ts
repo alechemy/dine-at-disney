@@ -6,23 +6,6 @@ const to = process.env.EMAIL_TO;
 const user = process.env.EMAIL_USERNAME;
 const pass = process.env.EMAIL_PASSWORD;
 
-const transporter = createTransport({
-  auth: { user, pass },
-  service: 'gmail',
-});
-
-function sendMail(mailOptions) {
-  return new Promise((resolve, reject) => {
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(info);
-      }
-    });
-  });
-}
-
 export default async function mail({
   diningAvailability,
   print,
@@ -39,17 +22,24 @@ export default async function mail({
     return;
   }
 
+  const transporter = createTransport({
+    auth: { user, pass },
+    service: 'gmail',
+  });
+
   const mailOptions = {
-    subject: `Found openings for ${diningAvailability.card.name} on ${date}`,
+    subject: `Found openings for ${diningAvailability.restaurant.name} on ${date}`,
     to,
     from: user,
     text: JSON.stringify(diningAvailability),
   };
 
   try {
-    await sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
     console.log('✔ email sent');
   } catch (err) {
     console.error(err, "✖ couldn't send email");
+  } finally {
+    transporter.close();
   }
 }

@@ -4,6 +4,6 @@ module.exports = {
   name: 'list',
   run: async (toolbox: GluegunToolbox) => {
     const { print, disneyApi } = toolbox;
-    disneyApi.listPlaces({ print });
+    await disneyApi.listPlaces({ print });
   },
 } as GluegunCommand;
