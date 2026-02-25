@@ -11,13 +11,19 @@ A CLI tool for checking dining reservation availability at Disneyland / Californ
 ## Prerequisites
 
 - **Node.js >= 20.12**
-- **Playwright** — installed automatically as a dependency. The tool launches Playwright's bundled Chromium browser to interact with Disney's website and bypass Akamai bot detection.
+- **Playwright + Chromium** — installed automatically as a dependency. The tool launches Playwright's bundled Chromium browser to interact with Disney's website and bypass Akamai bot detection. The browser binary is downloaded automatically when you run `npm install`. If it wasn't (e.g. you skipped scripts), run `npx playwright install chromium` manually.
 - **A MyDisney account** — you'll be prompted to log in on first run. Your session is saved to `~/.dine-at-disney-auth.json` so you won't need to log in every time.
 
 ## Installation
 
 ```sh
 npm install -g dine-at-disney
+```
+
+This will also automatically download the Chromium browser binary that Playwright needs. If the download is skipped for any reason, run:
+
+```sh
+npx playwright install chromium
 ```
 
 ## How it works

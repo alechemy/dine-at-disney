@@ -30,6 +30,21 @@ async function fetchJson(url: string): Promise<any> {
 
 const playwrightManager = new PlaywrightManager();
 
+function summarizeTimes(cleanedTimes: CleanedTime[]): string {
+  const byMealPeriod = new Map<string, string[]>();
+  for (const t of cleanedTimes) {
+    const times = byMealPeriod.get(t.mealPeriod) || [];
+    times.push(t.time);
+    byMealPeriod.set(t.mealPeriod, times);
+  }
+  return Array.from(byMealPeriod.entries())
+    .map(([period, times]) => {
+      if (times.length === 1) return `${period}: ${times[0]}`;
+      return `${period}: ${times[0]}–${times[times.length - 1]} (${times.length} slots)`;
+    })
+    .join(' | ');
+}
+
 function extractCleanedTimes(
   dateOffers: MealPeriodOffer[],
   date: string,
@@ -201,21 +216,21 @@ module.exports = (toolbox: GluegunToolbox) => {
         const { table } = print;
         print.success(`Found some offers on ${date}:`);
 
+        const sorted = Object.entries(hasOffers).sort(([, a], [, b]) =>
+          a.restaurant.name.localeCompare(b.restaurant.name)
+        );
+
         table(
           [
             ['Name', 'ID', 'Available Times'],
-            ...Object.entries(hasOffers)
-              .sort(([, a], [, b]) => a.restaurant.name.localeCompare(b.restaurant.name))
-              .map(([id, avail]) => [
-                avail.restaurant.name,
-                id,
-                avail.cleanedTimes.map((t) => `${t.time} (${t.mealPeriod})`).join(', '),
-              ]),
+            ...sorted.map(([id, avail]) => [avail.restaurant.name, id, summarizeTimes(avail.cleanedTimes)]),
           ],
           {
             format: 'markdown',
           }
         );
+
+        print.info('Run again with --ids <id> to poll for openings at a specific restaurant.');
         await playwrightManager.close();
         process.exit(0);
       }

@@ -20,21 +20,30 @@ export class PlaywrightManager {
 
     const hasAuth = fs.existsSync(AUTH_FILE);
 
-    if (hasAuth) {
-      print.info('Loading saved Disney session...');
-      await this.launchBrowser(print);
+    try {
+      if (hasAuth) {
+        print.info('Loading saved Disney session...');
+        await this.launchBrowser(print);
 
-      const valid = await this.validateSession(print);
-      if (!valid) {
-        print.warning('Saved session has expired. Re-authenticating...');
-        await this.close();
-        fs.unlinkSync(AUTH_FILE);
+        const valid = await this.validateSession(print);
+        if (!valid) {
+          print.warning('Saved session has expired. Re-authenticating...');
+          await this.close();
+          fs.unlinkSync(AUTH_FILE);
+          await this.interactiveLogin(print);
+          await this.launchBrowser(print);
+        }
+      } else {
         await this.interactiveLogin(print);
         await this.launchBrowser(print);
       }
-    } else {
-      await this.interactiveLogin(print);
-      await this.launchBrowser(print);
+    } catch (e: any) {
+      if (e?.message?.includes("Executable doesn't exist")) {
+        print.error('Playwright browser not found. Run the following command and try again:');
+        print.info('  npx playwright install chromium');
+        process.exit(1);
+      }
+      throw e;
     }
   }
 
@@ -186,14 +195,16 @@ export class PlaywrightManager {
         if (await nextMonthBtn.isVisible()) {
           if (await nextMonthBtn.isDisabled()) break;
           await nextMonthBtn.click({ force: true });
-          await this.page.waitForTimeout(1000);
+          await this.page.waitForTimeout(1500);
           monthClicks++;
         } else {
           break;
         }
       }
 
-      if (!(await dateLoc.isVisible())) {
+      // Use waitFor instead of isVisible() so we tolerate residual calendar animation
+      const dateVisible = await dateLoc.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false);
+      if (!dateVisible) {
         throw new Error(`Date ${date} is not available to select. It might be too far in the future or past.`);
       }
 
@@ -221,16 +232,15 @@ export class PlaywrightManager {
 
       // 4. Click Next on Time panel
       const timeNextBtn = this.page.locator('wdpr-button#timeSearchButton');
+      await timeNextBtn.waitFor({ state: 'visible', timeout: 5000 });
       await timeNextBtn.click({ force: true });
-      await this.page.waitForTimeout(1000);
 
-      // 5. Click Done on Location panel
+      // 5. Click Done on Location panel — wait for it to appear after the time step advances
       if (print) print.info('Clicking search...');
       const locationBtn = this.page.locator('button#btnLocationDone').first();
-      if (await locationBtn.isVisible()) {
-        await locationBtn.click({ force: true });
-        await this.page.waitForTimeout(1000);
-      }
+      await locationBtn.waitFor({ state: 'visible', timeout: 5000 });
+      await locationBtn.click({ force: true });
+      await this.page.waitForTimeout(1000);
 
       if (print) print.info('Waiting for availability results...');
       const response: Response | null = await availabilityPromise;
