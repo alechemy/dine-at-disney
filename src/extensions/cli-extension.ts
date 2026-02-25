@@ -30,19 +30,28 @@ async function fetchJson(url: string): Promise<any> {
 
 const playwrightManager = new PlaywrightManager();
 
-function summarizeTimes(cleanedTimes: CleanedTime[]): string {
+function summarizeTimes(cleanedTimes: CleanedTime[], maxLength = 80): string {
   const byMealPeriod = new Map<string, string[]>();
   for (const t of cleanedTimes) {
     const times = byMealPeriod.get(t.mealPeriod) || [];
     times.push(t.time);
     byMealPeriod.set(t.mealPeriod, times);
   }
-  return Array.from(byMealPeriod.entries())
-    .map(([period, times]) => {
-      if (times.length === 1) return `${period}: ${times[0]}`;
-      return `${period}: ${times[0]}–${times[times.length - 1]} (${times.length} slots)`;
-    })
-    .join(' | ');
+  const parts = Array.from(byMealPeriod.entries()).map(([period, times]) => {
+    if (times.length === 1) return `${period}: ${times[0]}`;
+    return `${period}: ${times[0]}–${times[times.length - 1]} (${times.length} slots)`;
+  });
+
+  let result = '';
+  for (let i = 0; i < parts.length; i++) {
+    const next = result ? `${result} | ${parts[i]}` : parts[i];
+    if (result && next.length > maxLength) {
+      const remaining = parts.length - i;
+      return `${result} | +${remaining} more...`;
+    }
+    result = next;
+  }
+  return result;
 }
 
 function extractCleanedTimes(
