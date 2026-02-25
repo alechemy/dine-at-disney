@@ -1,6 +1,6 @@
 {
   "name": "dine-at-disney",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "A CLI tool that checks for dining availability at Disneyland and California Adventure park restaurants.",
   "repository": {
     "type": "git",
