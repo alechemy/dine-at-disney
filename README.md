@@ -1,102 +1,92 @@
-# dine-at-disney 🍽 🎆
+![dine-at-disney](logo.png)
 
-A CLI tool for checking dining reservation availability at Disneyland / California Adventure.
+[![npm version](https://img.shields.io/npm/v/dine-at-disney)](https://www.npmjs.com/package/dine-at-disney)
+[![npm downloads](https://img.shields.io/npm/dm/dine-at-disney)](https://www.npmjs.com/package/dine-at-disney)
+
+A CLI tool for finding and monitoring dining reservations at Disneyland and California Adventure.
 
 ## Features
 
-- See a list of all restaurants that offer reservations.
-- Search for availability across all restaurants, or narrow your query to specific places.
-- Continually monitor a restaurant for availability, and receive email/push notifications when an opening is found.
-
-## Prerequisites
-
-- **Node.js >= 20.12**
-- **Playwright + Chromium** — installed automatically as a dependency. The tool launches Playwright's bundled Chromium browser to interact with Disney's website and bypass Akamai bot detection. The browser binary is downloaded automatically when you run `npm install`. If it wasn't (e.g. you skipped scripts), run `npx playwright install chromium` manually.
-- **A MyDisney account** — you'll be prompted to log in on first run. Your session is saved to `~/.dine-at-disney-auth.json` so you won't need to log in every time.
+- List all restaurants that accept reservations, with their IDs
+- Search for availability across every restaurant at once
+- Filter results by party size, date, and time window
+- Monitor specific restaurants and poll automatically every 60 seconds
+- Send email or Pushover push notifications the moment a table opens up
 
 ## Installation
+
+Requires **Node.js >= 20.12**.
 
 ```sh
 npm install -g dine-at-disney
 ```
 
-This will also automatically download the Chromium browser binary that Playwright needs. If the download is skipped for any reason, run:
+This also downloads the Chromium binary that [Playwright](https://playwright.dev/) needs. If that step was skipped (e.g. you ran with `--ignore-scripts`), install it manually:
 
 ```sh
 npx playwright install chromium
 ```
 
-## How it works
+## Example Usage
 
-Disney's dining reservation site uses Akamai bot detection, which blocks direct API requests. This tool uses [Playwright](https://playwright.dev/) to drive a real Chrome browser (minimized in your dock), filling out Disney's search form and intercepting the API responses. When polling for a specific restaurant, it uses a hybrid approach — fast in-page API calls when possible, with automatic fallback to a full UI-driven search when Akamai intervenes.
+**You need a [MyDisney account](https://disneyaccount.disney.go.com/). On first run, a browser window will open for you to log in. Your session is saved to `~/.dine-at-disney-auth.json` and reused on subsequent runs.**
 
-## Usage
+---
 
-### First run — authentication
-
-On first run (or when your session expires), a Chrome window will open and prompt you to log in to your MyDisney account. Once login is detected, the session is saved automatically. Subsequent runs reuse the saved session.
-
-### List restaurants and their IDs
+List all reservable restaurants and their IDs
 
 ```sh
 dine-at-disney list
 ```
 
-Sample output:
-
 ```
-Fetching restaurant list...
-| Name                                                   | ID       | Location              |
-| ------------------------------------------------------ | -------- | --------------------- |
-| Blue Bayou Restaurant                                  | 354099   | Disneyland Park       |
-| Cafe Orleans                                           | 354117   | Disneyland Park       |
-| Carnation Cafe                                         | 354129   | Disneyland Park       |
-| Carthay Circle Lounge - Alfresco Dining                | 16588263 | Disney California Adv |
-| Carthay Circle Restaurant                              | 16515009 | Disney California Adv |
-| Catal Restaurant                                       | 354132   | Downtown Disney Dist  |
+| Name                                    | ID       | Location              |
+| --------------------------------------- | -------- | --------------------- |
+| Blue Bayou Restaurant                   | 354099   | Disneyland Park       |
+| Cafe Orleans                            | 354117   | Disneyland Park       |
+| Carnation Cafe                          | 354129   | Disneyland Park       |
+| Carthay Circle Restaurant               | 16515009 | Disney California Adv |
+| Catal Restaurant                        | 354132   | Downtown Disney Dist  |
 ...
 ```
 
-### Search for openings at any restaurant
+---
+
+Search all restaurants for openings on a specific date
 
 ```sh
 dine-at-disney search --date 2026-03-15 --party 2
 ```
 
-`--date` defaults to today if omitted. `--party` defaults to 2.
-
-You can filter the results to a specific time window using `--startTime` and `--endTime` (e.g., `--startTime "08:00" --endTime "1:00 PM"`). 
-You can also provide just one of these options to search from a specific time onwards (e.g., `--startTime "5:00 PM"`) or up until a specific time (e.g., `--endTime "12:00 PM"`).
-
-By default, the browser runs minimized in your dock. Add `--show-browser` to watch it interact with Disney's site (useful for debugging):
-
-```sh
-dine-at-disney search --date 2026-03-15 --party 2 --show-browser
-```
-
-Sample results:
-
 ```
 Found some offers on 2026-03-15:
-| Name                               | ID       | Available Times                        |
-| ---------------------------------- | -------- | -------------------------------------- |
-| Catal Restaurant                   | 354132   | 5:00 PM (Dinner)                       |
-| GCH Craftsman Bar                  | 19343532 | 6:45 PM (Dinner), 8:00 PM (Dinner)    |
-| Goofy's Kitchen                    | 354261   | 7:35 PM (Dinner)                       |
-| River Belle Terrace                | 354450   | 5:30 PM (Dinner), 2:30 PM (Lunch)     |
+| Name                | ID       | Available Times                     |
+| ------------------- | -------- | ----------------------------------- |
+| Catal Restaurant    | 354132   | 5:00 PM (Dinner)                    |
+| GCH Craftsman Bar   | 19343532 | 6:45 PM (Dinner), 8:00 PM (Dinner)  |
+| Goofy's Kitchen     | 354261   | 7:35 PM (Dinner)                    |
+| River Belle Terrace | 354450   | 5:30 PM (Dinner), 2:30 PM (Lunch)   |
 ```
 
-When searching all restaurants (no `--ids`), results are displayed once and the program exits.
+> `--date` defaults to today. `--party` defaults to 2.
 
-### Monitor a specific restaurant
+---
 
-This will poll every 60 seconds and use [notification](#notifications) hooks if configured.
+Narrow results to a specific time window
+
+```sh
+dine-at-disney search --date 2026-03-15 --party 2 --startTime "5:00 PM" --endTime "8:00 PM"
+```
+
+You can also provide just one bound — `--startTime "5:00 PM"` to search from that time onwards, or `--endTime "12:00 PM"` to search up until then.
+
+---
+
+Monitor a specific restaurant — polls every 60 seconds until a table appears
 
 ```sh
 dine-at-disney search --date 2026-03-15 --party 2 --ids 19013078 --startTime "5:00 PM"
 ```
-
-Sample output:
 
 ```
 Checking for tables for 2 people on 2026-03-15 from 5:00 PM onwards for IDs: 19013078...
@@ -107,32 +97,38 @@ Checking again in 60s. 1 total attempts.
 Checking again in 60s. 2 total attempts.
 ```
 
-### Monitor multiple specific restaurants
+---
+
+Monitor multiple restaurants at once
 
 ```sh
 dine-at-disney search --date 2026-03-15 --party 2 --ids "354261,354450"
 ```
 
-### Notifications
+---
 
-Notifications are triggered when monitoring specific restaurants (using `--ids`) and availability is found.
+Watch the browser interact with Disney's site (useful for debugging)
 
-#### Mail alerts
+```sh
+dine-at-disney search --date 2026-03-15 --party 2 --show-browser
+```
 
-See `.env.example` for info on the required fields for email alerting.
+## Notifications
 
-Copy those values into your own `.env` file.
+Notifications fire when monitoring with `--ids` and availability is found. Configure them by copying `.env.example` to `.env` and filling in the relevant fields.
 
-#### Pushover alerts
+### Email
 
-For more information see: [https://pushover.net/](https://pushover.net/)
+Set the SMTP fields described in `.env.example`.
 
-This service is a one time $5 fee forever. You can purchase a Pushover API token here: [https://pushover.net/pricing](https://pushover.net/pricing). Once setup you will get instant push notifications to your device when a table opens.
+### Pushover
 
-Additionally you can click the reserve link in the push notification to reserve the table.
+[Pushover](https://pushover.net/) is a one-time $5 purchase that delivers instant push notifications to your phone. Once set up, you'll get an alert with a direct booking link the moment a table opens.
 
 ![Push notification example](push.png)
 
-See `.env.example` for info on the required Pushover fields.
+Set `PUSHOVER_USER_KEY` and `PUSHOVER_API_TOKEN` in your `.env` file as described in `.env.example`.
 
-Copy those values into your own `.env` file.
+## How it works
+
+Disney's reservation site uses Akamai bot detection, which blocks direct API calls. This tool uses [Playwright](https://playwright.dev/) to drive a real Chromium browser (minimized in your dock), filling out Disney's search form and intercepting the underlying API responses. When monitoring a specific restaurant, it uses a hybrid approach — fast in-page API calls when possible, with automatic fallback to a full UI-driven search when Akamai intervenes.
