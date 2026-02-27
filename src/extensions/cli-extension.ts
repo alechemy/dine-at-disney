@@ -1,12 +1,7 @@
 import { GluegunToolbox, GluegunPrint } from 'gluegun';
-import {
-  AvailabilityApiResponse,
-  CleanedTime,
-  DiningAvailabilities,
-  MealPeriodOffer,
-  Restaurant,
-} from '../disney-api/model/response';
+import { AvailabilityApiResponse } from '../disney-api/model/response';
 import { PlaywrightManager } from '../disney-api/playwright-utils';
+import { parseAvailability, summarizeTimes } from '../disney-api/parse';
 
 const BASE_URL = 'https://disneyland.disney.go.com';
 const PLACES_URL = (date: string) =>
@@ -30,99 +25,6 @@ async function fetchJson(url: string): Promise<any> {
 
 const playwrightManager = new PlaywrightManager();
 
-function summarizeTimes(cleanedTimes: CleanedTime[], maxLength = 80): string {
-  const byMealPeriod = new Map<string, string[]>();
-  for (const t of cleanedTimes) {
-    const times = byMealPeriod.get(t.mealPeriod) || [];
-    times.push(t.time);
-    byMealPeriod.set(t.mealPeriod, times);
-  }
-  const parts = Array.from(byMealPeriod.entries()).map(([period, times]) => {
-    if (times.length === 1) return `${period}: ${times[0]}`;
-    return `${period}: ${times[0]}–${times[times.length - 1]} (${times.length} slots)`;
-  });
-
-  let result = '';
-  for (let i = 0; i < parts.length; i++) {
-    const next = result ? `${result} | ${parts[i]}` : parts[i];
-    if (result && next.length > maxLength) {
-      const remaining = parts.length - i;
-      return `${result} | +${remaining} more...`;
-    }
-    result = next;
-  }
-  return result;
-}
-
-function extractCleanedTimes(
-  dateOffers: MealPeriodOffer[],
-  date: string,
-  useMealPeriodName = false,
-): CleanedTime[] {
-  return dateOffers.flatMap((mealPeriod) =>
-    (mealPeriod.offersByAccessibility || []).flatMap((access) =>
-      (access.offers || []).map((offer) => ({
-        date,
-        time: offer.label,
-        label: offer.label,
-        mealPeriod: useMealPeriodName ? mealPeriod.mealPeriodName : mealPeriod.mealPeriodType,
-        offerId: offer.offerId,
-      }))
-    )
-  );
-}
-
-/**
- * Parse the dine-res availability API response into our internal format.
- * Handles both regular restaurants and dining events (e.g. World of Color Dining Package).
- */
-function parseAvailability(data: AvailabilityApiResponse, date: string): DiningAvailabilities {
-  const result: DiningAvailabilities = {};
-
-  // Regular restaurants
-  if (data?.restaurant) {
-    for (const [id, restaurant] of Object.entries(data.restaurant)) {
-      const dateOffers = restaurant.offers?.[date];
-      if (!dateOffers || dateOffers.length === 0) continue;
-
-      const cleanedTimes = extractCleanedTimes(dateOffers, date);
-      if (cleanedTimes.length === 0) continue;
-
-      result[id] = { restaurant, cleanedTimes };
-    }
-  }
-
-  // Dining events (e.g. World of Color Dining Package) — these nest restaurants
-  // inside eventTimes[]. We key the result by dining event ID so --ids matching works,
-  // and flatten all offers from all sub-restaurants into one entry.
-  if (data?.diningEvent) {
-    for (const [eventId, event] of Object.entries(data.diningEvent)) {
-      const allCleanedTimes: CleanedTime[] = [];
-      let firstRestaurant: Restaurant | null = null;
-
-      for (const eventTime of event.eventTimes || []) {
-        for (const restaurant of Object.values(eventTime.restaurant || {})) {
-          if (!firstRestaurant) firstRestaurant = restaurant;
-          const dateOffers = restaurant.offers?.[date];
-          if (!dateOffers || dateOffers.length === 0) continue;
-          allCleanedTimes.push(...extractCleanedTimes(dateOffers, date, true));
-        }
-      }
-
-      if (allCleanedTimes.length === 0 || !firstRestaurant) continue;
-
-      // Use the dining event name but the first sub-restaurant's details for display
-      const eventIdNum = eventId.split(';')[0];
-      result[eventIdNum] = {
-        restaurant: { ...firstRestaurant, name: event.name },
-        cleanedTimes: allCleanedTimes,
-      };
-    }
-  }
-
-  return result;
-}
-
 module.exports = (toolbox: GluegunToolbox) => {
   async function checkTables({
     date,
@@ -133,6 +35,8 @@ module.exports = (toolbox: GluegunToolbox) => {
     print,
     ids,
     showBrowser = false,
+    startTime,
+    endTime,
   }: {
     date: string;
     onSuccess: Function;
@@ -142,14 +46,25 @@ module.exports = (toolbox: GluegunToolbox) => {
     print: GluegunPrint;
     ids?: string[];
     showBrowser?: boolean;
+    startTime?: string;
+    endTime?: string;
   }): Promise<any> {
     if (numTries === 1) {
       await playwrightManager.init(print, { showBrowser });
 
+      let timeSuffix = '';
+      if (startTime && endTime) {
+        timeSuffix = ` between ${startTime} and ${endTime}`;
+      } else if (startTime) {
+        timeSuffix = ` from ${startTime} onwards`;
+      } else if (endTime) {
+        timeSuffix = ` up until ${endTime}`;
+      }
+
       if (ids && ids.length > 0) {
-        print.success(`Checking for tables for ${partySize} people on ${date} for IDs: ${ids.join(', ')}...`);
+        print.success(`Checking for tables for ${partySize} people on ${date}${timeSuffix} for IDs: ${ids.join(', ')}...`);
       } else {
-        print.success(`Checking for tables for ${partySize} people on ${date}...`);
+        print.success(`Checking for tables for ${partySize} people on ${date}${timeSuffix}...`);
       }
     }
 
@@ -170,18 +85,18 @@ module.exports = (toolbox: GluegunToolbox) => {
       }
 
       setTimeout(() => {
-        checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser });
+        checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser, startTime, endTime });
       }, 60000);
       return;
     }
 
-    const hasOffers = parseAvailability(data as AvailabilityApiResponse, date);
+    const hasOffers = parseAvailability(data as AvailabilityApiResponse, date, startTime, endTime);
     const restaurantIds = Object.keys(hasOffers);
 
     if (restaurantIds.length === 0) {
       print.warning(`No offers found for anything. Checking again in 60s. ${numTries} total attempts.`);
       setTimeout(() => {
-        checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser });
+        checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser, startTime, endTime });
       }, 60000);
     } else {
       if (ids) {
@@ -195,31 +110,30 @@ module.exports = (toolbox: GluegunToolbox) => {
                 times.push(t.time);
                 byMealPeriod.set(t.mealPeriod, times);
               }
+              const reservationUrl = `${BASE_URL}/dine-res/restaurant/${id}`;
               if (byMealPeriod.size <= 1) {
                 print.success(
-                  `Found offers at ${avail.cleanedTimes.map((t) => t.time).join(', ')} for ${
-                    avail.restaurant.name
-                  }. Checking again in 60s. ${numTries} total attempts.`
+                  `🎉 Found offers at ${avail.cleanedTimes.map((t) => t.time).join(', ')} for ${avail.restaurant.name}!`
                 );
               } else {
-                print.success(`Found offers for ${avail.restaurant.name}. Checking again in 60s. ${numTries} total attempts.`);
+                print.success(`🎉 Found offers for ${avail.restaurant.name}!`);
                 for (const [period, times] of byMealPeriod) {
                   print.success(`  ${period}: ${times.join(', ')}`);
                 }
               }
+              print.success(`   👉 Book now: ${reservationUrl}`);
               await onSuccess({ diningAvailability: avail });
             } else {
-              print.warning(
-                `No offers found for restaurant ID ${id}. Checking again in 60s. ${numTries} total attempts.`
-              );
+              print.warning(`No offers found for restaurant ID ${id}.`);
             }
           }
         } catch (err) {
           print.error(err);
         }
 
+        print.info(`Checking again in 60s. ${numTries} total attempts.`);
         setTimeout(() => {
-          checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser });
+          checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser, startTime, endTime });
         }, 60000);
       } else {
         const { table } = print;

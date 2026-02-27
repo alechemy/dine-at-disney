@@ -65,6 +65,9 @@ dine-at-disney search --date 2026-03-15 --party 2
 
 `--date` defaults to today if omitted. `--party` defaults to 2.
 
+You can filter the results to a specific time window using `--startTime` and `--endTime` (e.g., `--startTime "08:00" --endTime "1:00 PM"`). 
+You can also provide just one of these options to search from a specific time onwards (e.g., `--startTime "5:00 PM"`) or up until a specific time (e.g., `--endTime "12:00 PM"`).
+
 By default, the browser runs minimized in your dock. Add `--show-browser` to watch it interact with Disney's site (useful for debugging):
 
 ```sh
@@ -90,15 +93,18 @@ When searching all restaurants (no `--ids`), results are displayed once and the 
 This will poll every 60 seconds and use [notification](#notifications) hooks if configured.
 
 ```sh
-dine-at-disney search --date 2026-03-15 --party 2 --ids 19013078
+dine-at-disney search --date 2026-03-15 --party 2 --ids 19013078 --startTime "5:00 PM"
 ```
 
 Sample output:
 
 ```
-Checking for tables for 2 people on 2026-03-15 for IDs: 19013078...
-No offers found for restaurant ID 19013078. Checking again in 60s. 1 total attempts.
-Found offers at 5:30 PM, 7:00 PM for Lamplight Lounge. Checking again in 60s. 2 total attempts.
+Checking for tables for 2 people on 2026-03-15 from 5:00 PM onwards for IDs: 19013078...
+No offers found for restaurant ID 19013078.
+Checking again in 60s. 1 total attempts.
+🎉 Found offers at 5:30 PM, 7:00 PM for Lamplight Lounge!
+   👉 Book now: https://disneyland.disney.go.com/dine-res/restaurant/19013078
+Checking again in 60s. 2 total attempts.
 ```
 
 ### Monitor multiple specific restaurants
