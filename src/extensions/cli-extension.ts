@@ -1,11 +1,8 @@
 import { GluegunToolbox, GluegunPrint } from 'gluegun';
 import { AvailabilityApiResponse } from '../disney-api/model/response';
-import { PlaywrightManager } from '../disney-api/playwright-utils';
+import { PlaywrightManager, Resort } from '../disney-api/playwright-utils';
+import { RESORT_CONFIG, getPlacesUrl } from '../disney-api/resort-config';
 import { parseAvailability, summarizeTimes } from '../disney-api/parse';
-
-const BASE_URL = 'https://disneyland.disney.go.com';
-const PLACES_URL = (date: string) =>
-  `${BASE_URL}/finder/api/v1/explorer-service/list-ancestor-entities/dlr/80008297;entityType=destination/${date}/dining`;
 
 async function fetchJson(url: string): Promise<any> {
   const response = await fetch(url, {
@@ -37,6 +34,7 @@ module.exports = (toolbox: GluegunToolbox) => {
     showBrowser = false,
     startTime,
     endTime,
+    resort = 'dlr',
   }: {
     date: string;
     onSuccess: Function;
@@ -48,9 +46,10 @@ module.exports = (toolbox: GluegunToolbox) => {
     showBrowser?: boolean;
     startTime?: string;
     endTime?: string;
+    resort?: Resort;
   }): Promise<any> {
     if (numTries === 1) {
-      await playwrightManager.init(print, { showBrowser });
+      await playwrightManager.init(print, { showBrowser, resort });
 
       let timeSuffix = '';
       if (startTime && endTime) {
@@ -77,7 +76,7 @@ module.exports = (toolbox: GluegunToolbox) => {
     if (!data) {
       if (numTries === 1) {
         print.error('Failed to fetch availability data. Your session may have expired.');
-        print.info('Delete ~/.dine-at-disney-auth.json and run again to re-authenticate.');
+        print.info(`Delete ${RESORT_CONFIG[resort].authFile} and run again to re-authenticate.`);
         await playwrightManager.close();
         process.exit(-1);
       } else {
@@ -85,7 +84,7 @@ module.exports = (toolbox: GluegunToolbox) => {
       }
 
       setTimeout(() => {
-        checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser, startTime, endTime });
+        checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser, startTime, endTime, resort });
       }, 60000);
       return;
     }
@@ -96,7 +95,7 @@ module.exports = (toolbox: GluegunToolbox) => {
     if (restaurantIds.length === 0) {
       print.warning(`No offers found for anything. Checking again in 60s. ${numTries} total attempts.`);
       setTimeout(() => {
-        checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser, startTime, endTime });
+        checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser, startTime, endTime, resort });
       }, 60000);
     } else {
       if (ids) {
@@ -110,7 +109,7 @@ module.exports = (toolbox: GluegunToolbox) => {
                 times.push(t.time);
                 byMealPeriod.set(t.mealPeriod, times);
               }
-              const reservationUrl = `${BASE_URL}/dine-res/restaurant/${id}`;
+              const reservationUrl = `${RESORT_CONFIG[resort].baseUrl}/dine-res/restaurant/${id}`;
               if (byMealPeriod.size <= 1) {
                 print.success(
                   `🎉 Found offers at ${avail.cleanedTimes.map((t) => t.time).join(', ')} for ${avail.restaurant.name}!`
@@ -133,7 +132,7 @@ module.exports = (toolbox: GluegunToolbox) => {
 
         print.info(`Checking again in 60s. ${numTries} total attempts.`);
         setTimeout(() => {
-          checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser, startTime, endTime });
+          checkTables({ date, onSuccess, numTries: numTries + 1, partySize, tables, print, ids, showBrowser, startTime, endTime, resort });
         }, 60000);
       } else {
         const { table } = print;
@@ -160,7 +159,7 @@ module.exports = (toolbox: GluegunToolbox) => {
     }
   }
 
-  async function listPlaces({ print }: { print: GluegunPrint }): Promise<any> {
+  async function listPlaces({ print, resort = 'dlr' }: { print: GluegunPrint; resort?: Resort }): Promise<any> {
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + 3);
     const date = targetDate.toLocaleDateString('en-CA');
@@ -169,7 +168,7 @@ module.exports = (toolbox: GluegunToolbox) => {
 
     let data: any;
     try {
-      data = await fetchJson(PLACES_URL(date));
+      data = await fetchJson(getPlacesUrl(resort, date));
     } catch (e: any) {
       print.error(`Failed to retrieve the list of restaurants: ${e?.message}`);
       process.exit(-1);

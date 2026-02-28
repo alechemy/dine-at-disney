@@ -3,7 +3,9 @@
 [![npm version](https://img.shields.io/npm/v/dine-at-disney)](https://www.npmjs.com/package/dine-at-disney)
 [![npm downloads](https://img.shields.io/npm/dm/dine-at-disney)](https://www.npmjs.com/package/dine-at-disney)
 
-A CLI tool for finding and monitoring dining reservations at Disneyland and California Adventure.
+A CLI tool for finding and monitoring dining reservations at Disney parks.
+
+Supports **Disneyland Resort** (Disneyland + California Adventure) and **Walt Disney World** (Magic Kingdom, EPCOT, Hollywood Studios, Animal Kingdom, and the Disney Springs/resort restaurants).
 
 ## Features
 
@@ -12,6 +14,7 @@ A CLI tool for finding and monitoring dining reservations at Disneyland and Cali
 - Filter results by party size, date, and time window
 - Monitor specific restaurants and poll automatically every 60 seconds
 - Send email or Pushover push notifications the moment a table opens up
+- Supports both Disneyland Resort (`--resort dlr`) and Walt Disney World (`--resort wdw`)
 
 ## Installation
 
@@ -29,7 +32,9 @@ npx playwright install chromium
 
 ## Example Usage
 
-**You need a [MyDisney account](https://disneyaccount.disney.go.com/). On first run, a browser window will open for you to log in. Your session is saved to `~/.dine-at-disney-auth.json` and reused on subsequent runs.**
+**You need a [MyDisney account](https://disneyaccount.disney.go.com/). On first run, a browser window will open for you to log in. Your session is saved locally and reused on subsequent runs.**
+
+Sessions are stored per resort — `~/.dine-at-disney-auth-dlr.json` for Disneyland Resort, and `~/.dine-at-disney-auth-wdw.json` for Walt Disney World.
 
 ---
 
@@ -104,6 +109,32 @@ Monitor multiple restaurants at once
 ```sh
 dine-at-disney search --date 2026-03-15 --party 2 --ids "354261,354450"
 ```
+
+---
+
+Search by resort — Disneyland Resort or Walt Disney World
+
+```sh
+# Disneyland Resort (default)
+dine-at-disney list --resort dlr
+dine-at-disney search --resort dlr --date 2026-03-15 --party 2
+
+# Walt Disney World
+dine-at-disney list --resort wdw
+dine-at-disney search --resort wdw --date 2026-03-15 --party 2
+```
+
+> `--resort` defaults to `dlr`.
+
+---
+
+Clear a saved session and re-authenticate
+
+```sh
+dine-at-disney search --resort dlr --reauth
+```
+
+> Use `--reauth` if your session has expired and you want to force a fresh login without manually deleting the auth file.
 
 ---
 

@@ -1,7 +1,9 @@
+import * as fs from 'fs';
 import { GluegunCommand, GluegunToolbox } from 'gluegun';
 import mail from '../hooks/mail';
 import pushover from '../hooks/pushover';
 import { DiningAvailability } from '../disney-api/model/response';
+import { RESORT_CONFIG } from '../disney-api/resort-config';
 
 module.exports = {
   name: 'search',
@@ -12,7 +14,7 @@ module.exports = {
       disneyApi,
     } = toolbox;
 
-    const validOptions = new Set(['date', 'ids', 'party', 'show-browser', 'startTime', 'endTime']);
+    const validOptions = new Set(['date', 'ids', 'party', 'show-browser', 'startTime', 'endTime', 'resort', 'reauth']);
     const invalidOptions = Object.keys(options).filter((key) => !validOptions.has(key));
     if (invalidOptions.length > 0) {
       print.error(`Invalid option(s): ${invalidOptions.map((o) => `--${o}`).join(', ')}`);
@@ -26,7 +28,14 @@ module.exports = {
       'show-browser': showBrowser = false,
       startTime,
       endTime,
+      resort = 'dlr',
+      reauth = false,
     } = options;
+
+    if (resort !== 'dlr' && resort !== 'wdw') {
+      print.error('resort must be either "dlr" or "wdw".');
+      return;
+    }
 
     if (party < 1) {
       print.error('Party size must be at least 1.');
@@ -66,6 +75,16 @@ module.exports = {
       }
     }
 
+    if (reauth) {
+      const authFile = RESORT_CONFIG[resort].authFile;
+      if (fs.existsSync(authFile)) {
+        fs.unlinkSync(authFile);
+        print.info('Cleared saved session. You will be prompted to log in again.');
+      } else {
+        print.info('No saved session found — you will be prompted to log in.');
+      }
+    }
+
     //Hooks
     const onSuccess = async ({ diningAvailability }: { diningAvailability: DiningAvailability }) =>
       Promise.allSettled([
@@ -86,6 +105,7 @@ module.exports = {
         showBrowser,
         startTime: finalStartTime,
         endTime: finalEndTime,
+        resort,
       });
     } else {
       disneyApi.checkTables({
@@ -96,6 +116,7 @@ module.exports = {
         showBrowser,
         startTime: finalStartTime,
         endTime: finalEndTime,
+        resort,
       });
     }
   },

@@ -1,11 +1,9 @@
 import { chromium, Browser, BrowserContext, Page, Response } from 'playwright';
-import * as path from 'path';
 import * as fs from 'fs';
-import * as os from 'os';
 import { GluegunPrint } from 'gluegun';
+import { Resort, ResortConfig, RESORT_CONFIG } from './resort-config';
 
-const AUTH_FILE = path.join(os.homedir(), '.dine-at-disney-auth.json');
-const BASE_URL = 'https://disneyland.disney.go.com';
+export type { Resort };
 
 export class PlaywrightManager {
   private browser: Browser | null = null;
@@ -13,12 +11,19 @@ export class PlaywrightManager {
   private page: Page | null = null;
   private capturedHeaders: Record<string, string> | null = null;
   private showBrowser: boolean = false;
+  private resort: Resort = 'dlr';
 
-  async init(print: GluegunPrint, options?: { showBrowser?: boolean }) {
+  private get config(): ResortConfig {
+    return RESORT_CONFIG[this.resort];
+  }
+
+  async init(print: GluegunPrint, options?: { showBrowser?: boolean; resort?: Resort }) {
     if (this.page) return; // Already initialized
     this.showBrowser = options?.showBrowser ?? false;
+    this.resort = options?.resort ?? 'dlr';
 
-    const hasAuth = fs.existsSync(AUTH_FILE);
+    const authFile = this.config.authFile;
+    const hasAuth = fs.existsSync(authFile);
 
     try {
       if (hasAuth) {
@@ -29,7 +34,7 @@ export class PlaywrightManager {
         if (!valid) {
           print.warning('Saved session has expired. Re-authenticating...');
           await this.close();
-          fs.unlinkSync(AUTH_FILE);
+          fs.unlinkSync(authFile);
           await this.interactiveLogin(print);
           await this.launchBrowser(print);
         }
@@ -57,7 +62,7 @@ export class PlaywrightManager {
     const page = await context.newPage();
 
     try {
-      await page.goto(`${BASE_URL}/login/`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`${this.config.baseUrl}/login/`, { waitUntil: 'domcontentloaded' });
 
       print.info('Please complete the login in the browser window...');
       let loggedIn = false;
@@ -66,7 +71,7 @@ export class PlaywrightManager {
         try {
           const url = page.url().toLowerCase();
           loggedIn =
-            url.includes('disneyland.disney.go.com') &&
+            url.includes(this.config.domain) &&
             !url.includes('/login') &&
             !url.includes('registerdisney') &&
             !url.includes('authz');
@@ -77,7 +82,7 @@ export class PlaywrightManager {
 
       print.info('Login detected! Saving session...');
       await page.waitForTimeout(5000);
-      await context.storageState({ path: AUTH_FILE });
+      await context.storageState({ path: this.config.authFile });
       print.success('Session saved successfully!');
     } catch (e) {
       print.error('Login process was interrupted.');
@@ -90,7 +95,7 @@ export class PlaywrightManager {
   private async launchBrowser(print?: GluegunPrint) {
     this.browser = await chromium.launch({ headless: false });
     this.context = await this.browser.newContext({
-      storageState: AUTH_FILE,
+      storageState: this.config.authFile,
     });
     this.page = await this.context.newPage();
 
@@ -113,7 +118,7 @@ export class PlaywrightManager {
 
     // Navigate to the availability search page
     if (print) print.info('Loading availability search page...');
-    await this.page.goto(`${BASE_URL}/dine-res/availability/`, {
+    await this.page.goto(`${this.config.baseUrl}/dine-res/availability/`, {
       waitUntil: 'commit',
       timeout: 30000,
     });
@@ -135,7 +140,7 @@ export class PlaywrightManager {
         return false;
       }
 
-      return currentUrl.includes('disneyland.disney.go.com');
+      return currentUrl.includes(this.config.domain);
     } catch {
       return false;
     }
@@ -336,7 +341,7 @@ export class PlaywrightManager {
         }
 
         // Navigate back to the availability form
-        await this.page.goto(`${BASE_URL}/dine-res/availability/`, {
+        await this.page.goto(`${this.config.baseUrl}/dine-res/availability/`, {
           waitUntil: 'commit',
           timeout: 30000,
         });
