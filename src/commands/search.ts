@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import { GluegunCommand, GluegunToolbox } from 'gluegun';
 import mail from '../hooks/mail';
+import macos from '../hooks/macos';
 import pushover from '../hooks/pushover';
 import { DiningAvailability } from '../disney-api/model/response';
 import { RESORT_CONFIG } from '../disney-api/resort-config';
@@ -14,7 +15,7 @@ module.exports = {
       disneyApi,
     } = toolbox;
 
-    const validOptions = new Set(['date', 'ids', 'party', 'show-browser', 'startTime', 'endTime', 'resort', 'reauth']);
+    const validOptions = new Set(['date', 'ids', 'party', 'show-browser', 'startTime', 'endTime', 'resort', 'reauth', 'alert']);
     const invalidOptions = Object.keys(options).filter((key) => !validOptions.has(key));
     if (invalidOptions.length > 0) {
       print.error(`Invalid option(s): ${invalidOptions.map((o) => `--${o}`).join(', ')}`);
@@ -30,6 +31,7 @@ module.exports = {
       endTime,
       resort = 'dlr',
       reauth = false,
+      alert,
     } = options;
 
     if (resort !== 'dlr' && resort !== 'wdw') {
@@ -85,12 +87,31 @@ module.exports = {
       }
     }
 
+    let parsedAlerts: string[] = [];
+    if (alert) {
+      parsedAlerts = (typeof alert === 'string' ? alert : String(alert)).split(',').map((a) => a.trim());
+      const validAlertTypes = new Set(['email', 'pushover', 'macosNotify']);
+      const invalidAlerts = parsedAlerts.filter((a) => !validAlertTypes.has(a));
+      if (invalidAlerts.length > 0) {
+        print.error(`Invalid alert type(s): ${invalidAlerts.join(', ')}. Valid options are: email, pushover, macosNotify.`);
+        return;
+      }
+    }
+
     //Hooks
-    const onSuccess = async ({ diningAvailability }: { diningAvailability: DiningAvailability }) =>
-      Promise.allSettled([
-        mail({ diningAvailability, print, partySize: party, date }),
-        pushover({ diningAvailability, print, partySize: party, date }),
-      ]);
+    const onSuccess = async ({ diningAvailability }: { diningAvailability: DiningAvailability }) => {
+      const promises = [];
+      if (parsedAlerts.includes('macosNotify')) {
+        promises.push(macos({ diningAvailability, print, partySize: party, date }));
+      }
+      if (parsedAlerts.includes('email')) {
+        promises.push(mail({ diningAvailability, print, partySize: party, date }));
+      }
+      if (parsedAlerts.includes('pushover')) {
+        promises.push(pushover({ diningAvailability, print, partySize: party, date }));
+      }
+      return Promise.allSettled(promises);
+    };
 
     const finalStartTime = startTime ? String(startTime) : undefined;
     const finalEndTime = endTime ? String(endTime) : undefined;

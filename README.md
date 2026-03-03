@@ -13,7 +13,7 @@ Supports **Disneyland Resort** (Disneyland + California Adventure) and **Walt Di
 - Search for availability across every restaurant at once
 - Filter results by party size, date, and time window
 - Monitor specific restaurants and poll automatically every 60 seconds
-- Send email or Pushover push notifications the moment a table opens up
+- Send email, macOS system, or Pushover push notifications the moment a table opens up
 - Supports both Disneyland Resort (`--resort dlr`) and Walt Disney World (`--resort wdw`)
 
 ## Installation
@@ -146,7 +146,13 @@ dine-at-disney search --date 2026-03-15 --party 2 --show-browser
 
 ## Notifications
 
-Notifications fire when monitoring with `--ids` and availability is found. Configure them by copying `.env.example` to `.env` and filling in the relevant fields.
+Notifications fire when monitoring with `--ids` and availability is found. To enable them, supply the `--alert` flag with a comma-separated list of alert types: `email`, `pushover`, and/or `macosNotify` (e.g. `--alert email,macosNotify`).
+
+For `email` and `pushover` notifications, configure them by copying `.env.example` to `.env` and filling in the relevant fields.
+
+### macOS System Notifications
+
+Native macOS notifications can be enabled by passing `macosNotify` to the `--alert` flag. This only works when running the CLI on macOS.
 
 ### Email
 
