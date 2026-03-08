@@ -25,17 +25,16 @@ export default async function macos({
   const escapeShellArg = (str: string) => `'${str.replace(/'/g, "'\\''")}'`;
 
   try {
-    for (const cleanedTime of diningAvailability.cleanedTimes) {
-      const title = 'Dine at Disney';
-      const subtitle = escapeAppleScriptString(diningAvailability.restaurant.name);
-      const message = escapeAppleScriptString(
-        `Found openings for ${partySize} people on ${date} @ ${cleanedTime.time}`
-      );
+    const times = diningAvailability.cleanedTimes.map((t) => t.time).join(', ');
+    const title = 'Dine at Disney';
+    const subtitle = escapeAppleScriptString(diningAvailability.restaurant.name);
+    const message = escapeAppleScriptString(
+      `Found openings for ${partySize} people on ${date}: ${times}`
+    );
 
-      const script = `display notification "${message}" with title "${title}" subtitle "${subtitle}" sound name "Glass"`;
+    const script = `display notification "${message}" with title "${title}" subtitle "${subtitle}" sound name "Glass"`;
 
-      await execAsync(`osascript -e ${escapeShellArg(script)}`);
-    }
+    await execAsync(`osascript -e ${escapeShellArg(script)}`);
   } catch (error) {
     print.warning(`Failed to send macOS notification: ${error instanceof Error ? error.message : String(error)}`);
   }

@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import { GluegunCommand, GluegunToolbox } from 'gluegun';
 import mail from '../hooks/mail';
 import macos from '../hooks/macos';
+import ntfy from '../hooks/ntfy';
 import pushover from '../hooks/pushover';
 import { DiningAvailability } from '../disney-api/model/response';
 import { RESORT_CONFIG } from '../disney-api/resort-config';
@@ -90,15 +91,29 @@ module.exports = {
     let parsedAlerts: string[] = [];
     if (alert) {
       parsedAlerts = (typeof alert === 'string' ? alert : String(alert)).split(',').map((a) => a.trim());
-      const validAlertTypes = new Set(['email', 'pushover', 'macosNotify']);
+      const validAlertTypes = new Set(['email', 'ntfy', 'pushover', 'macosNotify']);
       const invalidAlerts = parsedAlerts.filter((a) => !validAlertTypes.has(a));
       if (invalidAlerts.length > 0) {
-        print.error(`Invalid alert type(s): ${invalidAlerts.join(', ')}. Valid options are: email, pushover, macosNotify.`);
+        print.error(`Invalid alert type(s): ${invalidAlerts.join(', ')}. Valid options are: email, ntfy, pushover, macosNotify.`);
         return;
       }
     }
 
+    if (ids) {
+      const configuredAlerts: { name: string; flag: string }[] = [];
+      if (process.env.EMAIL_USERNAME && process.env.EMAIL_PASSWORD) configuredAlerts.push({ name: 'Email', flag: 'email' });
+      if (process.env.NTFY_TOPIC) configuredAlerts.push({ name: 'ntfy', flag: 'ntfy' });
+      if (process.env.PUSHOVER_USER && process.env.PUSHOVER_TOKEN) configuredAlerts.push({ name: 'Pushover', flag: 'pushover' });
+
+      const unusedAlerts = configuredAlerts.filter((a) => !parsedAlerts.includes(a.flag));
+      if (unusedAlerts.length > 0) {
+        const suggestions = unusedAlerts.map((a) => `${a.name} (--alert ${a.flag})`).join(', ');
+        print.warning(`Configured but not enabled: ${suggestions}`);
+      }
+    }
+
     //Hooks
+    const baseUrl = RESORT_CONFIG[resort].baseUrl;
     const onSuccess = async ({ diningAvailability }: { diningAvailability: DiningAvailability }) => {
       const promises = [];
       if (parsedAlerts.includes('macosNotify')) {
@@ -107,8 +122,11 @@ module.exports = {
       if (parsedAlerts.includes('email')) {
         promises.push(mail({ diningAvailability, print, partySize: party, date }));
       }
+      if (parsedAlerts.includes('ntfy')) {
+        promises.push(ntfy({ diningAvailability, print, partySize: party, date, baseUrl }));
+      }
       if (parsedAlerts.includes('pushover')) {
-        promises.push(pushover({ diningAvailability, print, partySize: party, date }));
+        promises.push(pushover({ diningAvailability, print, partySize: party, date, baseUrl }));
       }
       return Promise.allSettled(promises);
     };

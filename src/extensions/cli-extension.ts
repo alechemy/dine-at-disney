@@ -152,7 +152,19 @@ module.exports = (toolbox: GluegunToolbox) => {
           }
         );
 
-        print.info('Run again with --ids <id> to poll for openings at a specific restaurant.');
+        const exampleCmd = [
+          'dine-at-disney search',
+          `--date ${date}`,
+          `--party ${partySize}`,
+          startTime ? `--startTime "${startTime}"` : '',
+          endTime ? `--endTime "${endTime}"` : '',
+          resort !== 'dlr' ? `--resort ${resort}` : '',
+          '--ids <id1,id2,...>',
+          '--alert <email,ntfy,pushover,macosNotify>',
+        ]
+          .filter(Boolean)
+          .join(' ');
+        print.info(`\n💡 To monitor one or more restaurants, run:\n\n  ${exampleCmd}\n`);
         await playwrightManager.close();
         process.exit(0);
       }

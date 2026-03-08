@@ -13,7 +13,7 @@ Supports **Disneyland Resort** (Disneyland + California Adventure) and **Walt Di
 - Search for availability across every restaurant at once
 - Filter results by party size, date, and time window
 - Monitor specific restaurants and poll automatically every 60 seconds
-- Send email, macOS system, or Pushover push notifications the moment a table opens up
+- Send email, macOS system, ntfy, or Pushover push notifications the moment a table opens up
 - Supports both Disneyland Resort (`--resort dlr`) and Walt Disney World (`--resort wdw`)
 
 ## Installation
@@ -146,9 +146,9 @@ dine-at-disney search --date 2026-03-15 --party 2 --show-browser
 
 ## Notifications
 
-Notifications fire when monitoring with `--ids` and availability is found. To enable them, supply the `--alert` flag with a comma-separated list of alert types: `email`, `pushover`, and/or `macosNotify` (e.g. `--alert email,macosNotify`).
+Notifications fire when monitoring with `--ids` and availability is found. To enable them, supply the `--alert` flag with a comma-separated list of alert types: `email`, `ntfy`, `pushover`, and/or `macosNotify` (e.g. `--alert email,macosNotify`).
 
-For `email` and `pushover` notifications, configure them by copying `.env.example` to `.env` and filling in the relevant fields.
+For `email`, `ntfy`, and `pushover` notifications, configure them by copying `.env.example` to `.env` and filling in the relevant fields.
 
 ### macOS System Notifications
 
@@ -157,6 +157,16 @@ Native macOS notifications can be enabled by passing `macosNotify` to the `--ale
 ### Email
 
 Set the SMTP fields described in `.env.example`.
+
+### ntfy
+
+[ntfy](https://ntfy.sh/) is a free, open-source push notification service — no account required. Pick a topic name, subscribe to it on your phone, and you're done.
+
+1. Install the ntfy app ([Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy) / [iOS](https://apps.apple.com/us/app/ntfy/id1625396347))
+2. Subscribe to a topic of your choosing. Pick something hard to guess, since anyone who knows the name can subscribe (e.g. `my-disney-alerts-a1b2c3`)
+3. Set `NTFY_TOPIC` in your `.env` file to the same topic name
+
+Optionally set `NTFY_SERVER` if you're self-hosting ntfy (defaults to `https://ntfy.sh`).
 
 ### Pushover
 
